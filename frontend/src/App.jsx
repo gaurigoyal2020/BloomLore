@@ -7,7 +7,7 @@ import {
 import ResultsPage from './ResultsPage';
 import ProcessingPage from './ProcessingPage';
 import Mascot from './Mascot';
-import { uploadVideo } from './api';
+import { submitUpload, getJobStatus } from './api';
 import './index.css';
 
 /* ─── Scene Background ───────────────────────────────────────────── */
@@ -112,38 +112,89 @@ function App() {
     else setError('Please upload a valid video file');
   };
 
+  /* ── Upload progress mapping ──
+     Maps the backend's real pipeline stages to a 0-100 number for the
+     progress bar. File transfer itself gets 0-15% (it's the fastest,
+     most predictable part); the remaining 15-100% is split across the
+     real backend stages reported by GET /api/status/:jobId. Every one
+     of these numbers now reflects something that's ACTUALLY happening
+     server-side — there's no timer pretending progress is being made.
+  */
+  const STAGE_PROGRESS = {
+    queued: 15,
+    converting: 30,
+    transcribing: 55,
+    translating: 78,
+    'building-subtitles': 92,
+    done: 100,
+  };
+  const POLL_INTERVAL_MS = 2000;
+
   /* ── Upload ──
-     Uses the shared uploadVideo() helper from api.js, which:
-       - reads the backend URL from VITE_API_URL (no hardcoding)
-       - reports real upload progress via XHR (0-70%), leaving
-         70-100% for server-side processing
+     Two real phases now, both reflected honestly in the progress bar:
+       1. File transfer to the server (submitUpload) — real XHR progress,
+          scaled into the 0-15% slice of the bar.
+       2. Background processing (ffmpeg -> Deepgram -> translation ->
+          subtitles) — the server does this AFTER already responding with
+          a jobId, so we poll GET /api/status/:jobId every 2s and read the
+          real current stage, mapped to 15-100% via STAGE_PROGRESS above.
+     This replaces the old setInterval() that just ticked the number up
+     by 1 every 600ms regardless of what the server was actually doing —
+     that was a real fake-progress bug, same category as the other fake
+     data you've had me fix elsewhere in this app.
   */
   const handleUpload = async () => {
     if (!file) { setError('Please select a video file'); return; }
 
     setUploading(true); setError(null); setProgress(0);
 
-    // Simulate the server-processing tail (70 -> 99%) while we wait
-    // for the response, since the backend doesn't stream progress yet.
-    const tailInterval = setInterval(() => {
-      setProgress((p) => (p >= 99 ? 99 : p + 1));
-    }, 600);
-
     try {
-      const json = await uploadVideo(file, targetLang, (pct) => {
-        // XHR progress only covers the upload phase (0-70%)
-        setProgress((prev) => Math.max(prev, pct));
+      const { jobId } = await submitUpload(file, targetLang, (pct) => {
+        // pct here is 0-100 for the transfer alone; scale it down into
+        // this bar's 0-15% slice for the transfer phase.
+        setProgress((prev) => Math.max(prev, Math.round(pct * 0.15)));
       });
-      clearInterval(tailInterval);
-      setProgress(100);
-      setResult(json.data);
-      setTimeout(() => setUploading(false), 500);
+
+      await pollUntilDone(jobId);
     } catch (err) {
-      clearInterval(tailInterval);
       setError(err.message || 'Failed to process video. Please try again.');
       setUploading(false);
       setProgress(0);
     }
+  };
+
+  /* ── Poll a job until it's complete or errors out ──
+     Recursive setTimeout rather than setInterval: each poll waits for
+     the previous one to fully finish before scheduling the next, so
+     slow network responses can't pile up multiple overlapping requests.
+  */
+  const pollUntilDone = (jobId) => {
+    return new Promise((resolve, reject) => {
+      const poll = async () => {
+        try {
+          const status = await getJobStatus(jobId);
+
+          if (status.status === 'error') {
+            reject(new Error(status.error || 'Processing failed'));
+            return;
+          }
+
+          setProgress(STAGE_PROGRESS[status.stage] ?? 15);
+
+          if (status.status === 'complete') {
+            setResult(status.result);
+            setTimeout(() => setUploading(false), 500);
+            resolve();
+            return;
+          }
+
+          setTimeout(poll, POLL_INTERVAL_MS);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      poll();
+    });
   };
 
   /* ── Reset ── */
