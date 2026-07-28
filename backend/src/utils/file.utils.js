@@ -10,7 +10,6 @@ export const ensureDirectoryExists = (dirPath) => {
   }
 };
 
-export const readFileAsBuffer = (filePath) => fs.readFileSync(filePath);
 
 export const writeFile = (filePath, content) =>
   fs.writeFileSync(filePath, content);

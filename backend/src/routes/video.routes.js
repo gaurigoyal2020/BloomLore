@@ -1,13 +1,17 @@
 import express from "express";
 import { upload } from "../config/multer.config.js";
 import { uploadVideo, getJobStatusHandler } from "../controllers/video.controller.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-// POST /api/upload — accepts a file, queues it, returns a jobId right away
-router.post("/upload", upload.single("file"), uploadVideo);
+// requireAuth runs BEFORE multer parses the file body — rejecting an
+// unauthenticated request before we spend any time/bandwidth reading a
+// potentially large upload is cheaper than checking auth afterward.
+router.post("/upload", requireAuth, upload.single("file"), uploadVideo);
 
-// GET /api/status/:jobId — poll this to track real processing progress
-router.get("/status/:jobId", getJobStatusHandler);
+// Also protected — job status/results shouldn't be readable by anyone
+// who happens to guess or intercept a jobId.
+router.get("/status/:jobId", requireAuth, getJobStatusHandler);
 
 export default router;

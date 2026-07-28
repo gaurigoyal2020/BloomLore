@@ -18,4 +18,11 @@
     // that reads the extracted audio, not this encoded video.
     //The default was medium
 
+-> Turned video processing into an asychronu job queue. 
+ * **Prevents request timeouts:** Long-running video jobs no longer fail because the HTTP connection times out; the client gets a `jobId` immediately.
+* **Enables real progress updates:** A queued job can be polled for status, making accurate progress reporting possible instead of a fake loading bar.
+* **Protects server resources:** Limits processing to one job at a time, preventing multiple `ffmpeg` and API calls from competing for CPU/RAM and risking instability.
+* **Creates a foundation for persistence:** Introduces a proper job model (`jobId`, status, stages), making future persistent storage (e.g. D1) straightforward.
+* **Not a speed improvement:** Processing time is essentially unchanged; the benefits are reliability, visibility, and controlled resource usage rather than faster execution.
+
  

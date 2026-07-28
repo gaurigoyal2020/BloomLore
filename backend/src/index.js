@@ -1,10 +1,13 @@
+// "dotenv/config" (not dotenv + a separate .config() call) is
+// deliberate: it's a side-effect import that loads the .env file DURING
+// Node's import-resolution phase, which is what actually happens first —
+// a plain dotenv.config() call further down the file runs too late,
+// because ALL imports in this file resolve before any of the file's own
+// code runs, regardless of where they're written.
+import "dotenv/config";
 import express from "express";
-import dotenv from "dotenv";
 
-// Load env FIRST before anything else imports from config/env.js
-dotenv.config();
-
-import { validateEnv, env } from "./config/env.js";
+import { validateEnv, env } from "./config/env.config.js";
 import { corsConfig } from "./config/cors.config.js";
 import { setupMiddlewares } from "./config/app.config.js";
 import videoRoutes from "./routes/video.routes.js";

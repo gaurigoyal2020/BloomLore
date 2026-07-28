@@ -1,6 +1,6 @@
 import axios from "axios";
 import { logger } from "../utils/logger.js";
-import { env } from "../config/env.js";
+import { env } from "../config/env.config.js";
 
 const LANG_MAP = {
   en: "en", es: "es", fr: "fr", de: "de",

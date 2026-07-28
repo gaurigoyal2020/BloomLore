@@ -28,13 +28,14 @@ export const uploadVideo = async (req, res, next) => {
     const jobId = generateLessonId();
     const targetLang = req.body.targetLang ?? "en";
 
-    logger.info("Job queued", { jobId, originalName: req.file.originalname });
+    logger.info("Job queued", { jobId, userId: req.user.id, originalName: req.file.originalname });
 
     createJob({
       jobId,
       videoPath: req.file.path,
       targetLang,
       originalName: req.file.originalname,
+      userId: req.user.id,
     });
 
     // 202 Accepted = "request understood, work is not finished yet" — the
@@ -61,7 +62,11 @@ export const uploadVideo = async (req, res, next) => {
 export const getJobStatusHandler = (req, res) => {
   const job = getJob(req.params.jobId);
 
-  if (!job) {
+  // Same 404 for "doesn't exist" and "exists but isn't yours" — on
+  // purpose. Returning a different error for "belongs to someone else"
+  // would let an attacker confirm a jobId is real just by trying it,
+  // even without ever seeing its contents.
+  if (!job || job.userId !== req.user.id) {
     return res.status(404).json({ success: false, error: "Job not found" });
   }
 

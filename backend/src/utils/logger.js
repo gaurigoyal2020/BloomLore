@@ -1,4 +1,4 @@
-import { env } from "../config/env.js";
+import { env } from "../config/env.config.js";
 
 const timestamp = () => new Date().toISOString();
 

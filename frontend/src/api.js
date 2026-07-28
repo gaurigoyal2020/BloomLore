@@ -13,9 +13,14 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
  * upload itself). To track real processing progress after that, call
  * getJobStatus() repeatedly with the returned jobId.
  *
+ * accessToken is the current user's Supabase session token — required
+ * now that the backend's /api/upload route checks for a logged-in user
+ * (see auth.middleware.js). Sent the same way any Bearer-token API
+ * expects it: an `Authorization: Bearer <token>` header.
+ *
  * @returns {Promise<{ jobId: string }>}
  */
-export async function submitUpload(file, targetLang, onProgress) {
+export async function submitUpload(file, targetLang, accessToken, onProgress) {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("targetLang", targetLang);
@@ -44,6 +49,10 @@ export async function submitUpload(file, targetLang, onProgress) {
           const body = JSON.parse(xhr.responseText);
           message = body.error ?? message;
         } catch { /* ignore */ }
+        // 401 here specifically means the session expired mid-use —
+        // worth a clearer message than the backend's generic one, since
+        // the fix (log in again) is different from a normal upload error.
+        if (xhr.status === 401) message = "Your session expired — please log in again.";
         reject(new Error(message));
       }
     });
@@ -52,6 +61,7 @@ export async function submitUpload(file, targetLang, onProgress) {
     xhr.addEventListener("abort", () => reject(new Error("Upload cancelled")));
 
     xhr.open("POST", `${BASE_URL}/api/upload`);
+    xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
     xhr.send(formData);
   });
 }
@@ -64,8 +74,11 @@ export async function submitUpload(file, targetLang, onProgress) {
  *
  * @returns {Promise<{jobId, status, stage, error, result}>}
  */
-export async function getJobStatus(jobId) {
-  const res = await fetch(`${BASE_URL}/api/status/${jobId}`);
+export async function getJobStatus(jobId, accessToken) {
+  const res = await fetch(`${BASE_URL}/api/status/${jobId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (res.status === 401) throw new Error("Your session expired — please log in again.");
   if (!res.ok) throw new Error("Failed to fetch job status");
   const body = await res.json();
   return body.data;

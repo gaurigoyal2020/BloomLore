@@ -8,7 +8,7 @@ import {
 } from "./subtitle.service.js";
 import { ensureDirectoryExists, deleteFile } from "../utils/file.utils.js";
 import { logger } from "../utils/logger.js";
-import { env } from "../config/env.js";
+import { env } from "../config/env.config.js";
 
 // ── In-memory job store ─────────────────────────────────────────────
 // This is a plain JS Map living in the Node process's memory — NOT a
@@ -48,9 +48,10 @@ const timedStage = async (label, fn) => {
  * handler that calls this only has to wait for createJob() to return
  * (near-instant), not for the whole pipeline.
  */
-export const createJob = ({ jobId, videoPath, targetLang, originalName }) => {
+export const createJob = ({ jobId, videoPath, targetLang, originalName, userId }) => {
   jobs.set(jobId, {
     id: jobId,
+    userId,
     status: "queued", // 'queued' | 'processing' | 'complete' | 'error'
     stage: "queued", // finer-grained: which pipeline step is active right now
     error: null,

@@ -1,14 +1,18 @@
 import axios from "axios";
-import { readFileAsBuffer } from "../utils/file.utils.js";
-import { env } from "../config/env.js";
+import { createReadStream } from "fs";
+import { env } from "../config/env.config.js";
 
 export const transcribeAudio = async (audioPath) => {
-  const audioBuffer = readFileAsBuffer(audioPath);
-
   try {
     const response = await axios.post(
       "https://api.deepgram.com/v1/listen",
-      audioBuffer,
+      // A readable stream instead of a fully-loaded Buffer. axios/Node
+      // pipe this to Deepgram in small chunks (using chunked transfer
+      // encoding, since there's no upfront Content-Length to give) —
+      // the whole audio file is never held in memory at once. This
+      // mirrors what Deepgram's own SDK does internally for file
+      // transcription: it accepts fs.createReadStream() the same way.
+      createReadStream(audioPath),
       {
         headers: {
           Authorization: `Token ${env.deepgramApiKey}`,

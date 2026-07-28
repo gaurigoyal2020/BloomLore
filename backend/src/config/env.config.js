@@ -3,7 +3,7 @@
  * Crashes early with a clear message rather than failing silently at runtime.
  */
 
-const REQUIRED = ["DEEPGRAM_API_KEY"];
+const REQUIRED = ["DEEPGRAM_API_KEY", "SUPABASE_URL"];
 
 export function validateEnv() {
   const missing = REQUIRED.filter((key) => !process.env[key]);
@@ -30,4 +30,9 @@ export const env = {
   get deeplApiKey() { return process.env.DEEPL_API_KEY ?? ""; },
   get baseUrl() { return process.env.BASE_URL ?? `http://localhost:${process.env.PORT ?? "8000"}`; },
   get maxFileSizeMb() { return parseInt(process.env.MAX_FILE_SIZE_MB ?? "2000", 10); },
+  // Your Supabase project URL, e.g. https://abcdefgh.supabase.co
+  // Used to build the JWKS URL for verifying user access tokens — see
+  // auth.middleware.js. This is NOT a secret (it's the same URL your
+  // frontend uses), so it's fine to require it plainly like this.
+  get supabaseUrl() { return process.env.SUPABASE_URL ?? ""; },
 };

@@ -1,7 +1,7 @@
 import multer from "multer";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
-import { env } from "./env.js";
+import { env } from "./env.config.js";
 
 const ALLOWED_MIME_TYPES = [
   "video/mp4",

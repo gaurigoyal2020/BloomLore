@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Upload, CheckCircle, AlertCircle,
   Captions, ChevronDown, LayoutDashboard,
-  FolderOpen, Settings, CreditCard
+  FolderOpen, Settings, CreditCard, LogOut
 } from 'lucide-react';
 import ResultsPage from './ResultsPage';
 import ProcessingPage from './ProcessingPage';
 import Mascot from './Mascot';
+import Auth from './Auth';
+import { supabase } from './supabaseClient';
 import { submitUpload, getJobStatus } from './api';
 import './index.css';
 
@@ -37,7 +39,7 @@ const navItems = [
   { icon: Settings,        label: 'Settings'   },
 ];
 
-const Sidebar = ({ mascotState }) => (
+const Sidebar = ({ mascotState, userEmail, onLogout }) => (
   <aside className="sidebar">
     <div className="sidebar-logo">
       <Mascot size={32} state={mascotState} />
@@ -51,7 +53,18 @@ const Sidebar = ({ mascotState }) => (
         </div>
       ))}
     </nav>
+    {/* Free Plan / Upgrade block below is still decorative/fake (item #5
+        from the handoff doc) — deliberately left alone. Only the account
+        row above it is real, since that's what auth actually needed. */}
     <div className="sidebar-footer">
+      {userEmail && (
+        <div className="sidebar-account">
+          <span className="sidebar-account-email" title={userEmail}>{userEmail}</span>
+          <button className="sidebar-logout" onClick={onLogout} title="Log out">
+            <LogOut size={15} />
+          </button>
+        </div>
+      )}
       <div className="plan-label">Free Plan</div>
       <div className="plan-sub">2 of 5 uploads used</div>
       <div className="plan-bar">
@@ -82,6 +95,7 @@ const languages = [
 
 /* ─── App ────────────────────────────────────────────────────────── */
 function App() {
+  const [session,    setSession]    = useState(undefined); // undefined = still checking, null = logged out
   const [file,       setFile]       = useState(null);
   const [targetLang, setTargetLang] = useState('en');
   const [uploading,  setUploading]  = useState(false);
@@ -89,6 +103,34 @@ function App() {
   const [result,     setResult]     = useState(null);
   const [error,      setError]      = useState(null);
   const [dragActive, setDragActive] = useState(false);
+
+  /* ── Auth session tracking ──
+     getSession() checks for an existing session on first load (e.g. the
+     user was already logged in from a previous visit — Supabase persists
+     this in the browser for you). onAuthStateChange then keeps `session`
+     up to date for every future login/logout/token-refresh, so the rest
+     of the app never has to think about Supabase directly — it just
+     reads `session` (or `session?.access_token` when calling the API).
+  */
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = () => {
+    supabase.auth.signOut();
+    // App itself never unmounts on logout (it's the root component) — so
+    // without this, a second person logging into the same browser tab
+    // could briefly see whatever file/result was left over from the
+    // previous user. Explicit reset instead of assuming a fresh start.
+    setFile(null); setResult(null); setError(null);
+    setProgress(0); setUploading(false);
+  };
 
   /* ── Drag handlers ── */
   const handleDrag = (e) => {
@@ -149,7 +191,7 @@ function App() {
     setUploading(true); setError(null); setProgress(0);
 
     try {
-      const { jobId } = await submitUpload(file, targetLang, (pct) => {
+      const { jobId } = await submitUpload(file, targetLang, session.access_token, (pct) => {
         // pct here is 0-100 for the transfer alone; scale it down into
         // this bar's 0-15% slice for the transfer phase.
         setProgress((prev) => Math.max(prev, Math.round(pct * 0.15)));
@@ -167,12 +209,27 @@ function App() {
      Recursive setTimeout rather than setInterval: each poll waits for
      the previous one to fully finish before scheduling the next, so
      slow network responses can't pile up multiple overlapping requests.
+
+     IMPORTANT: each poll fetches a FRESH token via supabase.auth.getSession()
+     rather than reusing the token captured when upload started. Supabase
+     access tokens can expire in as little as 5 minutes by default, and
+     video processing can easily take longer than that — the Supabase SDK
+     auto-refreshes tokens in the background, but only getSession() gives
+     you the current one. Reusing a token closed-over from upload time
+     would start failing with "session expired" partway through long jobs,
+     even though the user never actually logged out.
   */
   const pollUntilDone = (jobId) => {
     return new Promise((resolve, reject) => {
       const poll = async () => {
         try {
-          const status = await getJobStatus(jobId);
+          const { data } = await supabase.auth.getSession();
+          if (!data.session) {
+            reject(new Error('Your session expired — please log in again.'));
+            return;
+          }
+
+          const status = await getJobStatus(jobId, data.session.access_token);
 
           if (status.status === 'error') {
             reject(new Error(status.error || 'Processing failed'));
@@ -204,12 +261,30 @@ function App() {
   };
 
   /* ── Render ─────────────────────────────────────────────────────── */
+
+  // Still checking for an existing session on first load — avoids a
+  // flash of the login screen for someone who's actually already logged
+  // in (Supabase's getSession() is a real async call, not instant).
+  if (session === undefined) {
+    return <div className="app-loading"><Mascot size={48} state="idle" /></div>;
+  }
+
+  // No session — show login/signup instead of the app. Everything below
+  // this point (upload, processing, results) requires a real user.
+  if (session === null) {
+    return <Auth />;
+  }
+
   return (
     <div className="app-layout">
       {/* Same three-state logic used just below to pick which page to
           render — the mascot now just mirrors it instead of always
           showing 'idle' regardless of what's actually happening. */}
-      <Sidebar mascotState={uploading ? 'active' : result ? 'done' : 'idle'} />
+      <Sidebar
+        mascotState={uploading ? 'active' : result ? 'done' : 'idle'}
+        userEmail={session.user?.email}
+        onLogout={handleLogout}
+      />
 
       <main className="main-content">
 

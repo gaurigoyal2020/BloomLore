@@ -1,6 +1,6 @@
 import multer from "multer";
 import { logger } from "../utils/logger.js";
-import { env } from "../config/env.js";
+import { env } from "../config/env.config.js";
 
 export class AppError extends Error {
   constructor(message, statusCode = 500) {
