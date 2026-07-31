@@ -6,9 +6,10 @@ import {
   groupWordsIntoChunks,
   buildTranslatedChunks,
 } from "./subtitle.service.js";
-import { ensureDirectoryExists, deleteFile } from "../utils/file.utils.js";
+import { uploadDirectoryToR2 } from "./storage.service.js";
+import { insertLesson } from "./db.service.js";
+import { ensureDirectoryExists, deleteFile, deleteDirectory } from "../utils/file.utils.js";
 import { logger } from "../utils/logger.js";
-import { env } from "../config/env.config.js";
 
 // ── In-memory job store ─────────────────────────────────────────────
 // This is a plain JS Map living in the Node process's memory — NOT a
@@ -144,15 +145,30 @@ async function processJob({ jobId, videoPath, targetLang, originalName }) {
     // Original upload no longer needed once ffmpeg has read from it.
     deleteFile(videoPath);
 
+    // audio.mp3 was only ever an internal artifact for Deepgram — it was
+    // never part of what the frontend serves, so it shouldn't go to R2
+    // at all. Deleting it here (rather than filtering it out during
+    // upload) keeps uploadDirectoryToR2 simple: it can just upload
+    // everything it finds, no exclusion-list logic needed.
+    deleteFile(audioPath);
+
     logger.info("[timing] TOTAL", {
       seconds: Number(((Date.now() - pipelineStart) / 1000).toFixed(1)),
     });
 
-    const base = `${env.baseUrl}/uploads/courses/${jobId}`;
+    job.stage = "uploading";
+    const base = await timedStage("upload to R2", () =>
+      uploadDirectoryToR2(outputPath, `courses/${jobId}`)
+    );
     const videoUrl = `${base}/index.m3u8`;
     const subtitleUrl = `${base}/subtitles.vtt`;
     const translatedSubtitleUrl =
       translatedText !== transcript ? `${base}/subtitles-translated.vtt` : null;
+
+    // Local disk was only ever scratch space for ffmpeg to write into —
+    // R2 is the actual permanent home for these files now. No reason to
+    // keep a second copy sitting on the VPS's disk indefinitely.
+    deleteDirectory(outputPath);
 
     job.status = "complete";
     job.stage = "done";
@@ -172,10 +188,46 @@ async function processJob({ jobId, videoPath, targetLang, originalName }) {
       subtitles: subtitleCues,
       translatedSubtitles: translatedCues,
     };
+
+    // Fire-and-forget on purpose — NOT awaited before returning, and its
+    // own internal error handling never throws (see db.service.js). A
+    // failed history write is a lesser problem than the video pipeline
+    // itself: the user is actively waiting on THIS job's result right
+    // now, and it already fully succeeded (video's in R2, subtitles are
+    // ready). Losing the ability to see it later in "upload history" is
+    // a real but smaller failure — it shouldn't retroactively turn an
+    // otherwise-successful job into an error for the person waiting.
+    insertLesson({
+      jobId,
+      userId: job.userId,
+      videoUrl,
+      subtitleUrl,
+      translatedSubtitleUrl,
+      transcript,
+      translatedText,
+      subtitles: subtitleCues,
+      translatedSubtitles: translatedCues,
+      originalFilename: originalName,
+      originalLang: detectedLang,
+      targetLang,
+      wordCount: words.length,
+    }).catch((err) => {
+      // Belt-and-suspenders: insertLesson already logs Supabase's own
+      // returned {error} responses internally, but this call itself
+      // isn't awaited by the caller — without this .catch(), an actual
+      // thrown/rejected failure (bad key, network issue, connection
+      // problem) here would vanish as a silent unhandled rejection
+      // instead of ever showing up in the logs at all.
+      logger.error("insertLesson threw unexpectedly", { jobId, error: err.message });
+    });
   } catch (err) {
     // Same cleanup-on-error behavior as before, just triggered from
     // inside the background worker instead of an HTTP catch block.
+    // Also cleans up outputPath now — whatever ffmpeg/subtitle
+    // generation managed to write before the failure would otherwise
+    // sit on disk forever, since nothing else ever revisits a failed job.
     deleteFile(videoPath);
+    deleteDirectory(outputPath);
     logger.error("Job failed", { jobId, error: err.message });
     job.status = "error";
     job.error = err.message || "Processing failed";

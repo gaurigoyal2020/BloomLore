@@ -168,6 +168,7 @@ function App() {
     transcribing: 55,
     translating: 78,
     'building-subtitles': 92,
+    uploading: 97,
     done: 100,
   };
   const POLL_INTERVAL_MS = 2000;

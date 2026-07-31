@@ -14,6 +14,8 @@ import videoRoutes from "./routes/video.routes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
 import { ensureUploadsDir } from "./utils/file.utils.js";
 import { logger } from "./utils/logger.js";
+import cron from "node-cron";
+import { runCleanup } from "./services/cleanup.service.js";
 
 // ── Startup validation ────────────────────────────────────────────────────────
 validateEnv();
@@ -51,3 +53,12 @@ app.listen(env.port, () => {
   logger.info(`Health check: http://localhost:${env.port}/health`);
   logger.info(`Upload endpoint: POST http://localhost:${env.port}/api/upload`);
 });
+
+// ── Cleanup cron ──────────────────────────────────────────────────────────────
+// Runs every 15 minutes: deletes any lesson (R2 files + Postgres row)
+// whose 24h window has passed. Also runs once immediately at startup —
+// without this, anything that expired while the server was down/being
+// redeployed would just sit there until the next scheduled tick, up to
+// 15 minutes later, instead of being caught right away.
+runCleanup();
+cron.schedule("*/15 * * * *", runCleanup);
