@@ -133,6 +133,7 @@ body {
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
+  text-decoration: none;
   transition: background var(--transition), color var(--transition);
   user-select: none;
 }
@@ -870,4 +871,60 @@ body {
   color: var(--purple-bright);
   border-color: var(--purple-bright);
   background: rgba(139, 92, 246, 0.2);
+}
+
+/* ── Projects (upload history) list ── */
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 720px;
+}
+
+.project-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--bg-settings);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-sm);
+  padding: 0.9rem 1.1rem;
+  text-decoration: none;
+  transition: border-color var(--transition), background var(--transition);
+}
+.project-row:hover {
+  border-color: var(--purple-bright);
+  background: var(--purple-glow-sm);
+}
+
+.project-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0; /* allows text-overflow ellipsis below to actually work */
+}
+
+.project-row-name {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-row-meta {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.project-row-expiry {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  white-space: nowrap;
 }

@@ -40,11 +40,47 @@ export async function deleteLessonRow(id) {
   }
 }
 /**
- * Writes one row to the lessons table once a job finishes successfully.
- * This is the durable record upload history will be built on top of —
- * separate from the in-memory job queue's ephemeral 'processing' state,
- * which is thrown away once a job completes either way.
+ * Returns a user's lesson history, newest first — summary fields only
+ * (no transcript/subtitle arrays, which can be large and aren't needed
+ * for a list view). Ownership is enforced here directly: only rows
+ * matching this exact user_id are ever returned, same "don't trust the
+ * caller, filter explicitly" pattern already used for job-status lookups.
  */
+export async function getLessonsForUser(userId) {
+  const { data, error } = await supabaseAdmin
+    .from("lessons")
+    .select("id, original_filename, original_lang, target_lang, word_count, created_at, expires_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    logger.error("Failed to fetch lessons", { userId, error: error.message });
+    return [];
+  }
+  return data;
+}
+
+/**
+ * Returns one full lesson (everything ResultsPage needs to render it)
+ * — but ONLY if it belongs to the requesting user. Returns null both
+ * when the id doesn't exist AND when it belongs to someone else, same
+ * "don't leak whether it exists" reasoning as job-status lookups.
+ */
+export async function getLessonById(id, userId) {
+  const { data, error } = await supabaseAdmin
+    .from("lessons")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error("Failed to fetch lesson", { id, error: error.message });
+    return null;
+  }
+  return data;
+}
+
 export async function insertLesson({
   jobId,
   userId,

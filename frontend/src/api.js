@@ -86,3 +86,26 @@ export async function getJobStatus(jobId, accessToken) {
 
 export const healthCheck = () =>
   fetch(`${BASE_URL}/health`).then((r) => r.json());
+
+/** GET /api/lessons — the current user's upload history. */
+export async function getLessons(accessToken) {
+  const res = await fetch(`${BASE_URL}/api/lessons`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (res.status === 401) throw new Error("Your session expired — please log in again.");
+  if (!res.ok) throw new Error("Failed to fetch upload history");
+  const body = await res.json();
+  return body.data.lessons;
+}
+
+/** GET /api/lessons/:id — one past lesson, shaped like a completed job's result. */
+export async function getLessonDetail(id, accessToken) {
+  const res = await fetch(`${BASE_URL}/api/lessons/${id}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (res.status === 401) throw new Error("Your session expired — please log in again.");
+  if (res.status === 404) throw new Error("This video wasn't found — it may have expired.");
+  if (!res.ok) throw new Error("Failed to fetch this video");
+  const body = await res.json();
+  return body.data;
+}
