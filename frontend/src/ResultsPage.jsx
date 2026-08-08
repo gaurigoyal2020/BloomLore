@@ -154,7 +154,7 @@ const ResultsPage = ({ result, file, targetLang, onReset }) => {
 
       {/* ── Breadcrumb ── */}
       <nav className="rp-breadcrumb">
-        <span className="rp-bc-link" onClick={onReset}>Projects</span>
+        <span className="rp-bc-link" onClick={onReset}>Activity</span>
         <ChevronRight size={13} className="rp-bc-sep" />
         <span className="rp-bc-link">{fileName}</span>
         <ChevronRight size={13} className="rp-bc-sep" />

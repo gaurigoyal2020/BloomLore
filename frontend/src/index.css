@@ -186,7 +186,8 @@ body {
   font-family: inherit;
   transition: opacity var(--transition), box-shadow var(--transition);
 }
-.btn-upgrade:hover { opacity: 0.92; box-shadow: 0 0 28px var(--purple-glow); }
+.btn-upgrade:hover:not(:disabled) { opacity: 0.92; box-shadow: 0 0 28px var(--purple-glow); }
+.btn-upgrade:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
 /* ── Page Header ─────────────────────────────────────────────────── */
 .page-header {
@@ -637,6 +638,92 @@ body {
   background: rgba(139, 92, 246, 0.18);
   border: 1px solid var(--purple-border);
   color: var(--purple-bright);
+}
+
+/* ── Section Head (title + trailing link, e.g. Dashboard "Recent Activity") ── */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.section-head .features-title { margin: 0; }
+
+.link-view-all {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--purple-bright);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.link-view-all:hover { text-decoration: underline; }
+
+/* ── Plan Tiers (My Plan page) ──────────────────────────────────── */
+.plan-tiers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  max-width: 760px;
+}
+
+.plan-tier-card {
+  background: var(--bg-card);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-card);
+  padding: 1.5rem;
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.plan-tier-card--current {
+  border-color: var(--purple-bright);
+  box-shadow: 0 0 0 1px var(--purple-border), 0 0 32px var(--purple-glow-sm);
+}
+
+.plan-tier-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.plan-tier-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+
+.plan-tier-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--purple-bright);
+  background: var(--purple-glow-sm);
+  border: 1px solid var(--purple-border);
+  border-radius: 99px;
+  padding: 3px 9px;
+}
+
+.plan-tier-price { font-size: 1.6rem; font-weight: 700; color: var(--text-primary); }
+.plan-tier-price span { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+
+.plan-tier-features { display: flex; flex-direction: column; gap: 8px; }
+.plan-tier-feature {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plan-tier-feature--off { color: var(--text-muted); }
+
+.btn-tier {
+  padding: 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1px solid var(--purple-border);
+  cursor: default;
+  text-align: center;
+}
+.btn-tier--current { background: var(--purple-glow-sm); color: var(--text-secondary); }
+.btn-tier--waitlist {
+  background: transparent;
+  color: var(--text-muted);
+  cursor: not-allowed;
 }
 
 /* ── Stats Card ──────────────────────────────────────────────────── */

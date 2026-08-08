@@ -1,14 +1,29 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import Mascot from './Mascot';
 import Auth from './Auth';
 import Layout from './Layout';
 import UploadsPage from './UploadsPage';
-import ProjectsPage from './ProjectsPage';
+import ActivityPage from './ActivityPage';
 import LessonDetailPage from './LessonDetailPage';
+import DashboardPage from './DashboardPage';
+import PlanPage from './PlanPage';
 import ComingSoonPage from './ComingSoonPage';
 import { supabase } from './supabaseClient';
 import './index.css';
+
+/**
+ * Gate for routes that need a real session (Upload, Activity, Plan, etc).
+ * Dashboard itself is NOT behind this — it's the one page that has to
+ * render for a logged-out visitor too, so it reads `session` from the
+ * outlet context and branches internally instead of being redirected
+ * away before it ever gets a chance to render.
+ */
+function RequireAuth({ session }) {
+  const location = useLocation();
+  if (!session) return <Navigate to="/login" replace state={{ from: location }} />;
+  return <Outlet />;
+}
 
 /**
  * App.jsx is now just two things: the auth gate, and the route map.
@@ -46,66 +61,54 @@ function App() {
     return <div className="app-loading"><Mascot size={48} state="idle" /></div>;
   }
 
-  // No session — show login/signup instead of the app, regardless of
-  // which URL was requested.
-  if (session === null) {
-    return <Auth />;
-  }
-
   return (
     <Routes>
+      {/* Full-screen, outside the Sidebar shell — logging in/out of the
+          app chrome mid-form would be jarring, and a logged-in visitor
+          has no reason to be here anyway. */}
+      <Route path="login" element={session ? <Navigate to="/" replace /> : <Auth />} />
+
       <Route
         element={
           <Layout
             session={session}
             mascotState={mascotState}
             setMascotState={setMascotState}
-            userEmail={session.user?.email}
+            userEmail={session?.user?.email}
             onLogout={handleLogout}
           />
         }
       >
-        <Route index element={<Navigate to="/upload" replace />} />
-        <Route path="upload" element={<UploadsPage />} />
-        <Route path="projects" element={<ProjectsPage />} />
-        <Route path="projects/:id" element={<LessonDetailPage />} />
-        <Route
-          path="dashboard"
-          element={
-            <ComingSoonPage
-              title="Dashboard"
-              description="An overview of your recent activity is coming soon."
-            />
-          }
-        />
-        <Route
-          path="subtitles"
-          element={
-            <ComingSoonPage
-              title="Subtitles"
-              description="Search and browse subtitles across all your videos — coming soon."
-            />
-          }
-        />
-        <Route
-          path="plan"
-          element={
-            <ComingSoonPage
-              title="My Plan"
-              description="Real usage stats and plan management are coming soon."
-            />
-          }
-        />
-        <Route
-          path="settings"
-          element={
-            <ComingSoonPage
-              title="Settings"
-              description="Account settings are coming soon."
-            />
-          }
-        />
-        <Route path="*" element={<Navigate to="/upload" replace />} />
+        {/* The default page, logged in or not — DashboardPage itself
+            decides what "logged in vs out" looks like. */}
+        <Route index element={<DashboardPage />} />
+
+        <Route element={<RequireAuth session={session} />}>
+          <Route path="upload" element={<UploadsPage />} />
+          <Route path="activity" element={<ActivityPage />} />
+          <Route path="activity/:id" element={<LessonDetailPage />} />
+          <Route path="plan" element={<PlanPage />} />
+          <Route
+            path="subtitles"
+            element={
+              <ComingSoonPage
+                title="Subtitles"
+                description="Search and browse subtitles across all your videos — coming soon."
+              />
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <ComingSoonPage
+                title="Settings"
+                description="Account settings are coming soon."
+              />
+            }
+          />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );

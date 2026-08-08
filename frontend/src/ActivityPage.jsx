@@ -20,7 +20,7 @@ function timeLeftLabel(expiresAt) {
   return `${minutes}m left`;
 }
 
-function ProjectsPage() {
+function ActivityPage() {
   const { session } = useOutletContext();
   const [lessons, setLessons] = useState(null); // null = still loading
   const [error, setError] = useState(null);
@@ -42,10 +42,10 @@ function ProjectsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">
-            Your Uploads
+            Your Activity
             <span className="title-icon" aria-hidden="true"> 📁</span>
           </h1>
-          <p className="page-sub">Videos auto-delete 24 hours after upload</p>
+          <p className="page-sub">Everything you&rsquo;ve uploaded — auto-deletes 24 hours after upload</p>
         </div>
         <Mascot size={56} state="idle" className="header-mascot" />
       </div>
@@ -65,7 +65,7 @@ function ProjectsPage() {
         <div className="settings-card" style={{ textAlign: 'center', maxWidth: 420 }}>
           <FolderOpen size={32} style={{ opacity: 0.5 }} />
           <p className="field-hint" style={{ display: 'block', marginTop: '0.75rem' }}>
-            No uploads yet — head to Uploads to generate your first subtitles.
+            No activity yet — head to Uploads to generate your first subtitles.
           </p>
         </div>
       )}
@@ -73,7 +73,7 @@ function ProjectsPage() {
       {lessons?.length > 0 && (
         <div className="projects-list">
           {lessons.map((lesson) => (
-            <Link key={lesson.id} to={`/projects/${lesson.id}`} className="project-row">
+            <Link key={lesson.id} to={`/activity/${lesson.id}`} className="project-row">
               <div className="project-row-main">
                 <span className="project-row-name">{lesson.original_filename ?? 'Untitled video'}</span>
                 <span className="project-row-meta">
@@ -94,4 +94,4 @@ function ProjectsPage() {
   );
 }
 
-export default ProjectsPage;
+export default ActivityPage;

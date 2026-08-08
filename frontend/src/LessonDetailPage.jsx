@@ -45,10 +45,10 @@ function LessonDetailPage() {
       result={result}
       file={result.originalFilename ? { name: result.originalFilename } : undefined}
       targetLang={result.targetLang}
-      // Breadcrumb in ResultsPage says "Projects" and calls onReset —
+      // Breadcrumb in ResultsPage says "Activity" and calls onReset —
       // here that should navigate back to the history list, not clear
       // an upload form (there isn't one on this page).
-      onReset={() => navigate('/projects')}
+      onReset={() => navigate('/activity')}
     />
   );
 }

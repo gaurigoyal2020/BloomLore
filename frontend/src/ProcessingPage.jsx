@@ -64,7 +64,7 @@ const ProcessingPage = ({ progress = 0, file, onBackground }) => {
 
       {/* ── Breadcrumb ── */}
       <nav className="pp-breadcrumb">
-        <span className="pp-bc-link">Projects</span>
+        <span className="pp-bc-link">Activity</span>
         <span className="pp-bc-sep">›</span>
         <span className="pp-bc-link">{fileName}</span>
         <span className="pp-bc-sep">›</span>

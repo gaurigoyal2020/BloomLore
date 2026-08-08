@@ -2,15 +2,15 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
 /**
- * The shared shell every logged-in page renders inside: sidebar on the
- * left, current page's content on the right via <Outlet />. This
- * replaces the old setup where App.jsx directly decided what to show in
- * `main.content` — now each nav item is a real route, and this is just
- * the frame around whichever one is active.
+ * The shared shell every page renders inside: sidebar on the left,
+ * current page's content on the right via <Outlet />. Rendered for both
+ * logged-in and logged-out visitors now (Dashboard needs to work for
+ * both) — `session` may be null here, and Sidebar/pages downstream are
+ * expected to handle that themselves rather than assume it's always set.
  */
 const Layout = ({ session, mascotState, setMascotState, userEmail, onLogout }) => (
   <div className="app-layout">
-    <Sidebar mascotState={mascotState} userEmail={userEmail} onLogout={onLogout} />
+    <Sidebar mascotState={mascotState} userEmail={userEmail} onLogout={onLogout} session={session} />
     <main className="main-content">
       <Outlet context={{ session, setMascotState }} />
     </main>
