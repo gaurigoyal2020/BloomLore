@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation, useOutletContext } from 'react-router-dom';
 import Mascot from './Mascot';
 import Auth from './Auth';
 import Layout from './Layout';
@@ -8,6 +8,7 @@ import ActivityPage from './ActivityPage';
 import LessonDetailPage from './LessonDetailPage';
 import DashboardPage from './DashboardPage';
 import PlanPage from './PlanPage';
+import SettingsPage from './SettingsPage';
 import ComingSoonPage from './ComingSoonPage';
 import { supabase } from './supabaseClient';
 import './index.css';
@@ -18,11 +19,21 @@ import './index.css';
  * render for a logged-out visitor too, so it reads `session` from the
  * outlet context and branches internally instead of being redirected
  * away before it ever gets a chance to render.
+ *
+ * IMPORTANT: this renders its own <Outlet>, which is a NEW outlet as
+ * far as useOutletContext() is concerned — it does NOT automatically
+ * inherit the {session, setMascotState} that Layout's <Outlet> passed
+ * down. Every page below (Upload/Activity/Plan/etc.) calls
+ * useOutletContext() expecting that value, so we have to read it here
+ * and hand it through explicitly via <Outlet context={...} />, or
+ * those pages get `undefined` and crash trying to destructure it.
  */
-function RequireAuth({ session }) {
+function RequireAuth() {
   const location = useLocation();
+  const outletContext = useOutletContext();
+  const { session } = outletContext ?? {};
   if (!session) return <Navigate to="/login" replace state={{ from: location }} />;
-  return <Outlet />;
+  return <Outlet context={outletContext} />;
 }
 
 /**
@@ -83,26 +94,24 @@ function App() {
             decides what "logged in vs out" looks like. */}
         <Route index element={<DashboardPage />} />
 
-        <Route element={<RequireAuth session={session} />}>
+        {/* Dashboard, Plan, and Settings are the three pages a logged-out
+            visitor is allowed to see (see Sidebar's nav filtering) — so
+            none of these three live behind RequireAuth. Plan and
+            Settings both branch internally on session === null instead
+            of redirecting away. */}
+        <Route path="plan" element={<PlanPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+
+        <Route element={<RequireAuth />}>
           <Route path="upload" element={<UploadsPage />} />
           <Route path="activity" element={<ActivityPage />} />
           <Route path="activity/:id" element={<LessonDetailPage />} />
-          <Route path="plan" element={<PlanPage />} />
           <Route
             path="subtitles"
             element={
               <ComingSoonPage
                 title="Subtitles"
                 description="Search and browse subtitles across all your videos — coming soon."
-              />
-            }
-          />
-          <Route
-            path="settings"
-            element={
-              <ComingSoonPage
-                title="Settings"
-                description="Account settings are coming soon."
               />
             }
           />

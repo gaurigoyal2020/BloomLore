@@ -12,7 +12,7 @@ const Layout = ({ session, mascotState, setMascotState, userEmail, onLogout }) =
   <div className="app-layout">
     <Sidebar mascotState={mascotState} userEmail={userEmail} onLogout={onLogout} session={session} />
     <main className="main-content">
-      <Outlet context={{ session, setMascotState }} />
+      <Outlet context={{ session, setMascotState, onLogout }} />
     </main>
   </div>
 );

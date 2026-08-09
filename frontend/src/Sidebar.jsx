@@ -8,12 +8,12 @@ import Mascot from './Mascot';
 import { getLessons } from './api';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard',    to: '/'          },
-  { icon: FolderOpen,      label: 'Your Activity', to: '/activity'  },
-  { icon: Upload,          label: 'Uploads',      to: '/upload'    },
-  { icon: Captions,        label: 'Subtitles',    to: '/subtitles' },
-  { icon: CreditCard,      label: 'My Plan',      to: '/plan'      },
-  { icon: Settings,        label: 'Settings',     to: '/settings'  },
+  { icon: LayoutDashboard, label: 'Dashboard',    to: '/',         public: true  },
+  { icon: FolderOpen,      label: 'Your Activity', to: '/activity', public: false },
+  { icon: Upload,          label: 'Uploads',      to: '/upload',    public: false },
+  { icon: Captions,        label: 'Subtitles',    to: '/subtitles', public: false },
+  { icon: CreditCard,      label: 'My Plan',      to: '/plan',      public: true  },
+  { icon: Settings,        label: 'Settings',     to: '/settings',  public: true  },
 ];
 
 const Sidebar = ({ mascotState, userEmail, onLogout, session }) => {
@@ -41,7 +41,11 @@ const Sidebar = ({ mascotState, userEmail, onLogout, session }) => {
       <span className="logo-text">BloomLore</span>
     </div>
     <nav className="sidebar-nav">
-      {navItems.map(({ icon: Icon, label, to }) => (
+      {/* Logged-out visitors only get the routes that actually work
+          without a session (matches the `public` routes in App.jsx —
+          Upload/Activity/Subtitles all redirect to /login anyway, so
+          there's no point showing them as options before that). */}
+      {navItems.filter((item) => item.public || session).map(({ icon: Icon, label, to }) => (
         // NavLink instead of a plain <div>: 'active' used to be
         // hardcoded to whichever page happened to be written directly
         // into App.jsx (always "Uploads", regardless of where you
@@ -64,12 +68,7 @@ const Sidebar = ({ mascotState, userEmail, onLogout, session }) => {
       {session ? (
         <>
           {userEmail && (
-            <div className="sidebar-account">
-              <span className="sidebar-account-email" title={userEmail}>{userEmail}</span>
-              <button className="sidebar-logout" onClick={onLogout} title="Log out">
-                <LogOut size={15} />
-              </button>
-            </div>
+            <div className="sidebar-account-info" title={userEmail}>{userEmail}</div>
           )}
           <Link to="/plan" className="plan-label" style={{ textDecoration: 'none' }}>Free Plan</Link>
           <div className="plan-sub">
@@ -78,6 +77,12 @@ const Sidebar = ({ mascotState, userEmail, onLogout, session }) => {
           <Link to="/plan" className="btn-upgrade" style={{ textDecoration: 'none', textAlign: 'center', display: 'block' }}>
             View Plans
           </Link>
+          {/* Deliberately its own full-width button, separated from the
+              email above by the divider — no longer a tiny icon sitting
+              right next to text you might actually be trying to click. */}
+          <button type="button" className="sidebar-logout-btn" onClick={onLogout}>
+            <LogOut size={14} /> Log Out
+          </button>
         </>
       ) : (
         <>

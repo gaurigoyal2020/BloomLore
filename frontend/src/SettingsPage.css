@@ -1,0 +1,181 @@
+/* SettingsPage.css
+   Only rules specific to /settings live here — shared tokens (colors,
+   radii, etc) come from index.css's :root, imported globally. See the
+   note at the top of index.css for the split convention. */
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1.75rem;
+  align-items: start;
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .settings-layout { grid-template-columns: 1fr; }
+}
+
+/* ── Left tab rail ───────────────────────────────────────────────── */
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-card);
+  padding: 0.6rem;
+  backdrop-filter: blur(16px);
+}
+
+.settings-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition), color var(--transition);
+}
+.settings-tab:hover { background: var(--purple-glow-sm); color: var(--text-primary); }
+.settings-tab--active {
+  background: var(--purple-glow-sm);
+  color: var(--purple-bright);
+  font-weight: 600;
+}
+
+.settings-tab-soon {
+  margin-left: auto;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 99px;
+  padding: 2px 6px;
+}
+
+/* ── Right content panels ───────────────────────────────────────── */
+.settings-panel-head { margin-bottom: 1.1rem; }
+.settings-panel-head h2 { margin: 0 0 4px; font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
+.settings-panel-head p { margin: 0; font-size: 0.82rem; color: var(--text-muted); }
+
+/* ── Profile avatar (the Mascot stands in for a photo — no upload
+   infra exists, and this keeps the brand front and center instead of
+   faking a feature) ────────────────────────────────────────────────*/
+.profile-avatar-frame {
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--purple-mid), var(--purple-bright));
+  box-shadow: 0 0 24px var(--purple-glow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profile-head-row { display: flex; align-items: center; gap: 1.1rem; margin-bottom: 1.5rem; }
+.profile-head-name { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
+.profile-head-email { font-size: 0.8rem; color: var(--text-muted); }
+
+/* ── Read-only info rows (Email, Member Since) ─────────────────── */
+.settings-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--purple-border);
+  font-size: 0.85rem;
+}
+.settings-info-row:last-child { border-bottom: none; }
+.settings-info-label { color: var(--text-muted); }
+.settings-info-value { color: var(--text-primary); font-weight: 500; }
+
+/* ── Text inputs (Full Name, Password) — same visual language as
+   Auth.jsx's .auth-label input, redefined here rather than reused
+   across files so this page doesn't depend on auth-specific naming. */
+.settings-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1rem; }
+.settings-field label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.settings-field input {
+  background: var(--bg-input);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 0.6rem 0.85rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.settings-field input:hover { border-color: var(--purple-bright); }
+.settings-field input:focus { border-color: var(--purple-bright); box-shadow: 0 0 0 3px var(--purple-glow-sm); }
+.settings-field input:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.settings-save-row { display: flex; align-items: center; gap: 10px; margin-top: 0.25rem; }
+.settings-save-msg { font-size: 0.78rem; color: var(--green); }
+
+.settings-btn-secondary {
+  padding: 0.55rem 1.2rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1px solid var(--purple-border);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: border-color var(--transition), background var(--transition);
+}
+.settings-btn-secondary:hover { border-color: var(--purple-bright); background: var(--purple-glow-sm); }
+
+/* ── Subscription mini-card ─────────────────────────────────────── */
+.settings-sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.settings-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--purple-bright);
+  background: var(--purple-glow-sm);
+  border: 1px solid var(--purple-border);
+  border-radius: 99px;
+  padding: 3px 9px;
+}
+
+/* ── Coming-soon panel (Billing, Notifications) ────────────────── */
+.settings-soon {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+.settings-soon-glyphs {
+  font-size: 1.4rem;
+  letter-spacing: 10px;
+  opacity: 0.7;
+  margin-bottom: 0.5rem;
+}

@@ -59,7 +59,10 @@ function UploadsPage() {
   const { session, setMascotState } = useOutletContext();
 
   const [file,       setFile]       = useState(null);
-  const [targetLang, setTargetLang] = useState('en');
+  // Defaults to whatever the user saved in Settings → Preferences
+  // (persisted on the Supabase user via user_metadata), falling back
+  // to English if they've never set one.
+  const [targetLang, setTargetLang] = useState(session?.user?.user_metadata?.default_target_lang ?? 'en');
   const [uploading,  setUploading]  = useState(false);
   const [progress,   setProgress]   = useState(0);
   const [result,     setResult]     = useState(null);

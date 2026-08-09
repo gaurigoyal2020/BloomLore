@@ -1,0 +1,127 @@
+/* ActivityPage.css
+   Only rules specific to /activity live here — shared tokens (colors,
+   radii, etc) come from index.css's :root, imported globally. See the
+   note at the top of index.css for the split convention.
+   Deliberately its own class names (not .project-row, which Dashboard's
+   "Recent Activity" mini-list still uses) so this page can be more
+   visually rich without changing how it looks embedded in Dashboard. */
+
+.activity-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--purple-bright);
+  background: var(--purple-glow-sm);
+  border: 1px solid var(--purple-border);
+  border-radius: 99px;
+  padding: 3px 10px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-settings);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-card);
+  padding: 1rem 1.2rem;
+  text-decoration: none;
+  transition: border-color var(--transition), background var(--transition), transform var(--transition);
+}
+.activity-row:hover {
+  border-color: var(--purple-bright);
+  background: var(--purple-glow-sm);
+  transform: translateY(-1px);
+}
+
+.activity-row-icon {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--purple-mid), var(--purple-bright));
+  box-shadow: 0 0 16px var(--purple-glow-sm);
+  color: #fff;
+}
+
+.activity-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.activity-row-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.activity-lang-pair { display: inline-flex; align-items: center; gap: 4px; }
+.activity-meta-dot { opacity: 0.45; }
+.activity-meta-item { display: inline-flex; align-items: center; gap: 4px; }
+
+.activity-row-badge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.activity-row-badge--ok {
+  color: var(--green);
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+.activity-row-badge--warn {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+.activity-row-badge--urgent {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.activity-empty {
+  text-align: center;
+  max-width: 440px;
+  padding: 2.5rem 1.5rem;
+}
+.activity-empty-glyphs {
+  font-size: 1.5rem;
+  letter-spacing: 12px;
+  margin-bottom: 0.5rem;
+  opacity: 0.75;
+}
