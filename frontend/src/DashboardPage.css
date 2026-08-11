@@ -1,0 +1,364 @@
+/* DashboardPage.css
+   Only rules specific to / (Dashboard, public + private) live here —
+   shared tokens (colors, radii, etc) come from index.css's :root,
+   imported globally. See the note at the top of index.css. */
+
+/* ══════════════════ Public (logged-out) landing ══════════════════ */
+
+.dash-hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 2rem;
+  align-items: center;
+  margin-bottom: 2.5rem;
+}
+@media (max-width: 860px) {
+  .dash-hero { grid-template-columns: 1fr; }
+}
+
+.dash-hero-heading {
+  font-size: 2.1rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin: 0 0 1rem;
+}
+.dash-hero-heading .accent {
+  background: linear-gradient(135deg, var(--purple-mid), var(--purple-bright));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dash-hero-sub {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
+  max-width: 480px;
+}
+
+.dash-cta-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+.btn-outline {
+  padding: 0.7rem 1.4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--purple-border);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: border-color var(--transition), background var(--transition);
+}
+.btn-outline:hover { border-color: var(--purple-bright); background: var(--purple-glow-sm); }
+
+.dash-hero-art {
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  border: 1px solid var(--purple-border);
+  box-shadow: 0 0 40px var(--purple-glow-sm);
+  aspect-ratio: 3 / 2;
+}
+.dash-hero-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.dash-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.1rem;
+}
+
+.dash-feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-card);
+  padding: 1.25rem;
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.dash-feature-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--purple-mid), var(--purple-bright));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 0 14px var(--purple-glow-sm);
+}
+
+.dash-feature-title { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+.dash-feature-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
+
+/* ══════════════════ Private (logged-in) dashboard ═════════════════ */
+/* The whole logged-in dashboard now lives inside one "scene": the
+   pixel-art room as a full-bleed backdrop (not a boxed banner), a dark
+   overlay for legibility, a few floating star/hydrangea glyphs for
+   depth (same glyphs + twinkle/float keyframes as UploadsPage's
+   scene-bg — see index.css), and every card sitting on top using the
+   existing glass-card look so the scene reads through them. */
+
+.dash-scene {
+  position: relative;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  border: 1px solid var(--purple-border);
+  padding: 2rem;
+}
+.dash-scene-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+.dash-scene-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(8, 6, 26, 0.88) 0%, rgba(8, 6, 26, 0.93) 40%, rgba(8, 6, 26, 0.97) 100%);
+}
+.dash-scene-glyph {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  color: rgba(196, 181, 253, 0.55);
+  filter: drop-shadow(0 0 8px rgba(196, 181, 253, 0.4));
+}
+.dash-scene-glyph--bloom {
+  color: rgba(139, 92, 246, 0.4);
+  filter: blur(0.5px);
+}
+.dash-scene-content { position: relative; z-index: 3; }
+
+.dash-welcome-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+}
+.dash-welcome-glyphs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.2rem;
+  color: rgba(196, 181, 253, 0.8);
+  margin-bottom: 0.4rem;
+}
+.dash-welcome-glyphs .twinkle { animation: twinkle 3s ease-in-out infinite; }
+
+.dash-search-wrap {
+  position: relative;
+  min-width: 220px;
+}
+.dash-search-wrap svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.dash-search-wrap input {
+  width: 100%;
+  background: rgba(10, 6, 30, 0.7);
+  border: 1px solid var(--purple-border);
+  border-radius: 99px;
+  color: var(--text-primary);
+  padding: 0.55rem 0.9rem 0.55rem 2.3rem;
+  font-size: 0.82rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.dash-search-wrap input:focus { border-color: var(--purple-bright); box-shadow: 0 0 0 3px var(--purple-glow-sm); }
+
+.dash-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+  align-items: stretch;
+}
+@media (max-width: 860px) {
+  .dash-columns { grid-template-columns: 1fr; }
+}
+
+/* ── "Your Bloom" card ──────────────────────────────────────────── */
+.bloom-card {
+  background: rgba(20, 14, 45, 0.82);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-card);
+  padding: 1.25rem 1.4rem;
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+}
+
+.bloom-garden {
+  position: relative;
+  height: 110px;
+  margin: 0.5rem 0 1rem;
+}
+.bloom-sprite {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 6px rgba(196, 181, 253, 0.5));
+  animation: float 5s ease-in-out infinite;
+}
+
+.bloom-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem 1.25rem;
+  margin-bottom: 0.9rem;
+}
+.bloom-stat-num { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); display: block; }
+.bloom-stat-label { font-size: 0.7rem; color: var(--text-muted); }
+
+.bloom-caption {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--purple-border);
+  padding-top: 0.75rem;
+  margin: 0;
+}
+
+/* ── Language Constellation card ───────────────────────────────── */
+.constellation-card {
+  background: rgba(20, 14, 45, 0.82);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-card);
+  padding: 1.25rem 1.4rem;
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+}
+.constellation-svg { width: 100%; flex: 1; min-height: 160px; }
+.constellation-star-label {
+  font-size: 8px;
+  fill: var(--text-secondary);
+  font-family: inherit;
+  text-anchor: middle;
+}
+
+/* ── Recent Stories (card grid, no fake video thumbnails — a
+   decorative gradient + language flag stands in, since there's no
+   real thumbnail-generation pipeline to be honest about) ──────────── */
+.story-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+}
+.story-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: rgba(20, 14, 45, 0.82);
+  backdrop-filter: blur(16px);
+  transition: border-color var(--transition), transform var(--transition);
+}
+.story-card:hover { border-color: var(--purple-bright); transform: translateY(-2px); }
+
+.story-art {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(219, 39, 119, 0.25));
+  font-size: 2.2rem;
+}
+.story-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 99px;
+  background: rgba(8, 6, 26, 0.75);
+  color: var(--text-secondary);
+}
+
+.story-info { padding: 0.7rem 0.85rem; }
+.story-name {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 3px;
+}
+.story-meta { font-size: 0.7rem; color: var(--text-muted); }
+
+/* ── Empty "dormant garden" state ──────────────────────────────── */
+.empty-garden {
+  text-align: center;
+  max-width: 340px;
+  margin: 1rem auto 0;
+  padding: 1.5rem 1rem 0.5rem;
+}
+.empty-garden-star {
+  color: rgba(196, 181, 253, 0.8);
+  animation: twinkle 3s ease-in-out infinite;
+  margin-bottom: 0.5rem;
+}
+.empty-garden-sprout { font-size: 1.8rem; animation: float 4s ease-in-out infinite; }
+.empty-garden-divider {
+  width: 40px;
+  height: 1px;
+  background: var(--purple-border);
+  margin: 0.75rem auto;
+}
+.empty-garden h3 { font-size: 0.95rem; color: var(--text-primary); margin: 0 0 0.4rem; }
+.empty-garden p { font-size: 0.8rem; color: var(--text-muted); margin: 0 0 1.1rem; line-height: 1.5; }
+
+.dash-upsell-banner {
+  background: var(--bg-card);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-card);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  backdrop-filter: blur(16px);
+  margin-top: 1.5rem;
+}
+.dash-upsell-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--purple-mid), var(--purple-bright));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 0 16px var(--purple-glow-sm);
+  flex-shrink: 0;
+}
+.dash-upsell-text { flex: 1; min-width: 200px; }
+.dash-upsell-text strong { display: block; font-size: 0.92rem; color: var(--text-primary); margin-bottom: 2px; }
+.dash-upsell-text span { font-size: 0.8rem; color: var(--text-muted); }
+.dash-upsell-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
