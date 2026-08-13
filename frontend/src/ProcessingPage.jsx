@@ -78,7 +78,6 @@ const ProcessingPage = ({ progress = 0, file, onBackground }) => {
           <p className="pp-sub">Hang tight! BloomLore is working its magic.</p>
         </div>
         <div className="pp-header-right">
-          <button className="pp-btn-how"><HelpCircle size={14} /> How it works?</button>
           <Mascot size={52} state={isDone ? 'done' : 'active'} />
         </div>
       </div>

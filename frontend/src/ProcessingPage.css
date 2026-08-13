@@ -57,19 +57,6 @@
   align-items: center;
   gap: 0.75rem;
 }
-.pp-btn-how {
-  display: flex; align-items: center; gap: 6px;
-  padding: 0.45rem 0.9rem;
-  background: rgba(139,92,246,0.1);
-  border: 1px solid var(--purple-border);
-  color: var(--text-secondary);
-  border-radius: 9px;
-  font-size: 0.82rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background .2s, color .2s;
-}
-.pp-btn-how:hover { background: var(--purple-glow-sm); color: var(--text-primary); }
 
 /* ── Body Layout ─────────────────────────────────────────────────── */
 .pp-body {
