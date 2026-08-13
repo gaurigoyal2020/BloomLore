@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import {
-  AlertCircle, Clock, Search, Globe, Sparkles, ShieldCheck, Zap,
+  AlertCircle, Clock, Sparkles, Hand, Flower2,
 } from 'lucide-react';
 import Mascot from './Mascot';
+import {
+  SubtitlesGlyph, MultiLanguageGlyph, GlobalReachGlyph, PrivateSecureGlyph,
+  BloomGlyph, WordsGlyph, LanguagesGlyph, ExpiryGlyph,
+} from './StatGlyphs';
 import { getLessons } from './api';
 import heroScene from './assets/hero-scene.webp';
 import './DashboardPage.css';
@@ -13,10 +17,14 @@ const LANG_NAME = {
   zh: 'Chinese', ja: 'Japanese', ko: 'Korean', pt: 'Portuguese',
   ru: 'Russian', ar: 'Arabic', it: 'Italian',
 };
-const FLAG = {
-  en: '🇺🇸', ja: '🇯🇵', ko: '🇰🇷', es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪',
-  zh: '🇨🇳', hi: '🇮🇳', pt: '🇧🇷', ru: '🇷🇺', ar: '🇸🇦', it: '🇮🇹',
-};
+// Deterministic color per language code (no flag emoji/images) — same
+// hashing approach as the constellation stars, just applied to badges.
+const BADGE_COLORS = ['#c084fc', '#67e8f9', '#f472b6', '#a78bfa', '#5eead4', '#fbbf24'];
+function badgeColor(code) {
+  let hash = 0;
+  for (let i = 0; i < (code ?? '').length; i += 1) hash = (hash * 31 + code.charCodeAt(i)) >>> 0;
+  return BADGE_COLORS[hash % BADGE_COLORS.length];
+}
 // The real number of languages the app supports (see UploadsPage's own
 // `languages` list) — the design inspiration said "100+", but that's
 // not true for this product yet, so this page says 12 instead.
@@ -60,18 +68,23 @@ function PublicDashboard() {
 
       <div className="dash-feature-grid">
         <div className="dash-feature-card">
-          <div className="dash-feature-icon"><Zap size={19} /></div>
-          <span className="dash-feature-title">AI-Powered Accuracy</span>
+          <div className="dash-feature-icon"><SubtitlesGlyph size={22} /></div>
+          <span className="dash-feature-title">Accurate Subtitles</span>
           <span className="dash-feature-desc">Deepgram-backed transcription tuned for clean, accurate subtitles.</span>
         </div>
         <div className="dash-feature-card">
-          <div className="dash-feature-icon"><Globe size={19} /></div>
-          <span className="dash-feature-title">{SUPPORTED_LANGUAGE_COUNT} Languages</span>
-          <span className="dash-feature-desc">Translate your subtitles into the language your audience actually speaks.</span>
+          <div className="dash-feature-icon"><MultiLanguageGlyph size={22} /></div>
+          <span className="dash-feature-title">Multi-language</span>
+          <span className="dash-feature-desc">Translate your subtitles into {SUPPORTED_LANGUAGE_COUNT} languages your audience actually speaks.</span>
         </div>
         <div className="dash-feature-card">
-          <div className="dash-feature-icon"><ShieldCheck size={19} /></div>
-          <span className="dash-feature-title">Secure &amp; Private</span>
+          <div className="dash-feature-icon"><GlobalReachGlyph size={22} /></div>
+          <span className="dash-feature-title">Global Reach</span>
+          <span className="dash-feature-desc">Share your story with viewers anywhere, in the language they understand.</span>
+        </div>
+        <div className="dash-feature-card">
+          <div className="dash-feature-icon"><PrivateSecureGlyph size={22} /></div>
+          <span className="dash-feature-title">Private &amp; Secure</span>
           <span className="dash-feature-desc">Videos auto-delete 24 hours after upload — nothing lingers on our servers.</span>
         </div>
       </div>
@@ -105,7 +118,7 @@ function BloomGarden({ totalUploads, totalWords, languagesUsed, subtitlesGenerat
       glyph,
       left: 8 + seededPercent(i, 3) * 84,
       top: 15 + seededPercent(i, 4) * 70,
-      size: 1.1 + seededPercent(i, 5) * 1.3,
+      size: 0.85 + seededPercent(i, 5) * 0.75,
       delay: seededPercent(i, 6) * 4,
     };
   });
@@ -139,12 +152,21 @@ function BloomGarden({ totalUploads, totalWords, languagesUsed, subtitlesGenerat
         <div><span className="bloom-stat-num">{totalWords.toLocaleString()}</span><span className="bloom-stat-label">Words</span></div>
         <div><span className="bloom-stat-num">{subtitlesGenerated}</span><span className="bloom-stat-label">Subtitles</span></div>
       </div>
+    </div>
+  );
+}
 
-      <p className="bloom-caption">
-        {languagesUsed > 0
-          ? `Your content has reached ${languagesUsed} language${languagesUsed === 1 ? '' : 's'}.`
-          : 'Translate your first video to start growing your garden.'}
-      </p>
+/** One card in the right-hand stat column — icon + real number + label,
+    matching the four-card column from the design reference. */
+function StatCard({ icon, value, label, sub }) {
+  return (
+    <div className="dash-stat-card">
+      <div className="dash-stat-icon">{icon}</div>
+      <div className="dash-stat-body">
+        <span className="dash-stat-value">{value}</span>
+        <span className="dash-stat-label">{label}</span>
+        {sub && <span className="dash-stat-sub">{sub}</span>}
+      </div>
     </div>
   );
 }
@@ -162,7 +184,7 @@ function LanguageConstellation({ topLanguages }) {
     const angle = (-90 + (360 / topLanguages.length) * i) * (Math.PI / 180);
     const x = cx + orbit * Math.cos(angle);
     const y = cy + orbit * Math.sin(angle);
-    const r = Math.min(11, 3.5 + Math.sqrt(count) * 2.5);
+    const r = Math.min(8, 2.6 + Math.sqrt(count) * 1.8);
     return { code, count, x, y, r, labelY: y + (y < cy ? -r - 6 : r + 12) };
   });
 
@@ -180,7 +202,7 @@ function LanguageConstellation({ topLanguages }) {
         <svg className="constellation-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Languages you've used, as a constellation">
           <defs>
             <filter id="starGlow" x="-100%" y="-100%" width="300%" height="300%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feGaussianBlur stdDeviation="2.2" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
@@ -198,7 +220,7 @@ function LanguageConstellation({ topLanguages }) {
           ))}
 
           {/* Hub — represents BloomLore/you, everything connects through it */}
-          <circle cx={cx} cy={cy} r="4" fill="var(--purple-bright)" filter="url(#starGlow)" />
+          <circle cx={cx} cy={cy} r="3" fill="var(--purple-bright)" filter="url(#starGlow)" />
 
           {stars.map((s) => (
             <g key={s.code}>
@@ -237,7 +259,6 @@ function EmptyGarden() {
 function PrivateDashboard({ session }) {
   const [lessons, setLessons] = useState(null); // null = still loading
   const [error, setError] = useState(null);
-  const [query, setQuery] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -274,50 +295,48 @@ function PrivateDashboard({ session }) {
   });
   const topLanguages = Object.entries(langCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
 
-  const filteredRecent = (lessons ?? [])
-    .filter((l) => (l.original_filename ?? '').toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 6);
+  // Same "soonest expiring lesson" used by nextExpiryLabel() below, just
+  // read directly here so the new stat card doesn't re-derive it twice.
+  const soonestLesson = lessons?.length
+    ? lessons.reduce((a, b) => (new Date(a.expires_at) < new Date(b.expires_at) ? a : b))
+    : null;
+
+  const recentLessons = (lessons ?? []).slice(0, 6);
 
   return (
-    <div className="dash-scene">
-      <img className="dash-scene-bg" src={heroScene} alt="" aria-hidden="true" />
-      <div className="dash-scene-overlay" aria-hidden="true" />
-      {/* Same floating glyph system as UploadsPage's scene-bg (twinkle/
-          float keyframes live in index.css) — scattered here for depth
-          across the full dashboard backdrop instead of one small card. */}
-      <span className="dash-scene-glyph twinkle" style={{ top: '6%', left: '10%', fontSize: '1rem' }} aria-hidden="true">✦</span>
-      <span className="dash-scene-glyph twinkle" style={{ top: '14%', right: '14%', fontSize: '0.8rem', animationDelay: '1.1s' }} aria-hidden="true">✦</span>
-      <span className="dash-scene-glyph twinkle" style={{ top: '4%', left: '46%', fontSize: '0.65rem', animationDelay: '0.6s' }} aria-hidden="true">·</span>
-      <span className="dash-scene-glyph dash-scene-glyph--bloom" style={{ bottom: '8%', left: '4%', fontSize: '2.2rem', animation: 'float 6s ease-in-out infinite' }} aria-hidden="true">❋</span>
-      <span className="dash-scene-glyph dash-scene-glyph--bloom" style={{ bottom: '4%', right: '8%', fontSize: '1.8rem', animation: 'float 5.5s ease-in-out infinite 1.2s' }} aria-hidden="true">🌸</span>
+    <>
+      {/* Compact hero band — background image + floating glyphs are
+          scoped to JUST this welcome banner now, not the whole page.
+          Previously this wrapped everything below too, which (a) made
+          overflow:hidden here clip the page and break scrolling once
+          the stat column made things taller, and (b) meant glyphs
+          positioned by top/bottom % were measured against the whole
+          page's height, so they could drift into card content. */}
+      <div className="dash-hero">
+        <img className="dash-scene-bg" src={heroScene} alt="" aria-hidden="true" />
+        <div className="dash-scene-overlay" aria-hidden="true" />
+        <span className="dash-scene-glyph twinkle" style={{ top: '10px', right: '14px', fontSize: '0.85rem' }} aria-hidden="true">✦</span>
+        <span className="dash-scene-glyph twinkle" style={{ top: '14px', left: '14px', fontSize: '0.6rem', animationDelay: '0.6s' }} aria-hidden="true">✦</span>
 
-      <div className="dash-scene-content">
-        <div className="dash-welcome-row">
-          <div>
-            <div className="dash-welcome-glyphs" aria-hidden="true">
-              <span className="twinkle">✦</span><span>🌸</span>
-            </div>
-            <h1 className="page-title">
-              Welcome back, <span className="accent">{displayName}</span>! 👋
-            </h1>
-            <p className="page-sub">Your little corner of BloomLore.</p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {lessons?.length > 0 && (
-              <div className="dash-search-wrap">
-                <Search size={15} />
-                <input
-                  type="text"
-                  placeholder="Search your uploads…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
+        <div className="dash-scene-content">
+          <div className="dash-welcome-row">
+            <div>
+              <div className="dash-welcome-glyphs" aria-hidden="true">
+                <span className="twinkle">✦</span>
+                <Flower2 size={15} className="welcome-flower-icon" />
               </div>
-            )}
+              <h1 className="page-title">
+                Welcome back, <span className="accent">{displayName}</span>!{' '}
+                <Hand size={26} className="welcome-wave-icon" />
+              </h1>
+              <p className="page-sub">Your little corner of BloomLore.</p>
+            </div>
             <Mascot size={52} state="idle" className="header-mascot" />
           </div>
         </div>
+      </div>
 
+      <div className="dash-body">
         {error && (
           <div className="alert-error">
             <AlertCircle size={16} />
@@ -341,6 +360,35 @@ function PrivateDashboard({ session }) {
                 subtitlesGenerated={subtitlesGenerated}
               />
               <LanguageConstellation topLanguages={topLanguages} />
+
+              <div className="dash-stat-col">
+                {/* Reuses totalUploads — same real count as "Videos" in
+                    the Bloom card above, same precedent as
+                    subtitlesGenerated reusing totalUploads below: this
+                    app doesn't track a separate "processing" status, so
+                    rather than fabricate one, both cards show what's
+                    actually true. */}
+                <StatCard
+                  icon={<BloomGlyph size={26} />}
+                  value={totalUploads}
+                  label="Active uploads"
+                />
+                <StatCard
+                  icon={<WordsGlyph />}
+                  value={totalWords.toLocaleString()}
+                  label="Words transcribed"
+                />
+                <StatCard
+                  icon={<LanguagesGlyph size={26} />}
+                  value={languagesUsed}
+                  label="Languages used"
+                />
+                <StatCard
+                  icon={<ExpiryGlyph size={24} />}
+                  value={soonestLesson ? timeLeftLabel(soonestLesson.expires_at) : '—'}
+                  label="Next expiry"
+                />
+              </div>
             </div>
 
             <div className="section-head" style={{ marginBottom: '0.9rem' }}>
@@ -354,13 +402,15 @@ function PrivateDashboard({ session }) {
             </div>
 
             <div className="story-grid">
-              {filteredRecent.length === 0 && (
-                <p className="field-hint">No uploads match &ldquo;{query}&rdquo;.</p>
-              )}
-              {filteredRecent.map((lesson) => (
+              {recentLessons.map((lesson) => (
                 <Link key={lesson.id} to={`/activity/${lesson.id}`} className="story-card">
                   <div className="story-art">
-                    <span>{FLAG[lesson.target_lang] ?? '🌍'}</span>
+                    <span
+                      className="story-lang-badge"
+                      style={{ '--badge-color': badgeColor(lesson.target_lang) }}
+                    >
+                      {(lesson.target_lang ?? '—').toUpperCase()}
+                    </span>
                     <span className="story-badge"><Clock size={10} /> {timeLeftLabel(lesson.expires_at)}</span>
                   </div>
                   <div className="story-info">
@@ -388,7 +438,7 @@ function PrivateDashboard({ session }) {
           </>
         )}
       </div>
-    </div>
+    </>
   );
 }
 

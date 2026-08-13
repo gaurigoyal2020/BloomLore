@@ -1,0 +1,85 @@
+/* ── Stat & feature glyphs ──────────────────────────────────────── */
+
+.glow-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 6px var(--glow-color)) drop-shadow(0 0 14px var(--glow-color));
+}
+
+/* GlyphFrame — every stat glyph (Bloom/Words/Languages/Expiry) sits
+   inside this. Fixed size + margin-bottom means the glow/sparkles
+   never collide with a label rendered right after it, regardless of
+   the surrounding card's own layout. */
+.glyph-frame {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 0.6rem;
+}
+.glyph-frame-float {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: float 3.4s ease-in-out infinite;
+}
+
+.glyph-sparkle {
+  position: absolute;
+  font-size: 0.62rem;
+  color: #fde68a;
+  filter: drop-shadow(0 0 4px #fde68a);
+  pointer-events: none;
+}
+.glyph-sparkle--a { top: -2px; right: 2px; animation-delay: 0.3s; }
+.glyph-sparkle--b { bottom: 2px; left: -4px; font-size: 0.45rem; animation-delay: 1.1s; }
+
+/* Active Uploads — mascot, "active"/processing state */
+.bloom-glyph-frame .glyph-frame-float {
+  filter: drop-shadow(0 0 8px var(--purple-glow)) drop-shadow(0 0 16px var(--purple-glow-sm));
+}
+
+/* Words Transcribed — 3 floating, glowing letters */
+.words-glyph {
+  display: inline-flex;
+  gap: 0.15rem;
+  align-items: baseline;
+}
+.words-glyph-letter {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1;
+  display: inline-block;
+  animation: float 3.6s ease-in-out infinite, twinkle 2.6s ease-in-out infinite;
+  text-shadow: 0 0 5px currentColor, 0 0 16px currentColor;
+}
+
+/* Languages Used — compact multi-color constellation */
+.languages-glyph-frame .glyph-frame-float {
+  filter: drop-shadow(0 0 6px var(--purple-glow-sm));
+}
+
+/* Next Expiry — Moon + Clock, layered and glowed with CSS only */
+.expiry-glyph {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--amber);
+  filter: drop-shadow(0 0 6px var(--amber-glow)) drop-shadow(0 0 14px var(--amber-glow));
+}
+.expiry-glyph-clock {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  color: #e9d5ff;
+  background: var(--bg-dark);
+  border-radius: 50%;
+  padding: 2px;
+  filter: drop-shadow(0 0 4px var(--purple-glow-sm));
+}

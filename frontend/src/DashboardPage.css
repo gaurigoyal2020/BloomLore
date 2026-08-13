@@ -86,31 +86,32 @@
   width: 40px;
   height: 40px;
   border-radius: 11px;
-  background: linear-gradient(135deg, var(--purple-mid), var(--purple-bright));
+  background: rgba(20, 14, 45, 0.6);
+  border: 1px solid var(--purple-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  box-shadow: 0 0 14px var(--purple-glow-sm);
 }
 
 .dash-feature-title { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
 .dash-feature-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
 
 /* ══════════════════ Private (logged-in) dashboard ═════════════════ */
-/* The whole logged-in dashboard now lives inside one "scene": the
-   pixel-art room as a full-bleed backdrop (not a boxed banner), a dark
-   overlay for legibility, a few floating star/hydrangea glyphs for
-   depth (same glyphs + twinkle/float keyframes as UploadsPage's
-   scene-bg — see index.css), and every card sitting on top using the
-   existing glass-card look so the scene reads through them. */
-
-.dash-scene {
+/* Compact welcome hero band — pixel-art backdrop + dark overlay +
+   a couple of corner sparkles, scoped to JUST the welcome row. This
+   used to wrap the entire page (see git history), which both broke
+   scrolling (overflow:hidden on a container that grew taller than the
+   viewport once the stat column was added) and let the floating
+   glyphs' top/bottom % positions drift into card content below. Now
+   the band is exactly as tall as its own content, so neither can
+   happen — .dash-body below is a plain sibling, not a child. */
+.dash-hero {
   position: relative;
   border-radius: var(--radius-card);
   overflow: hidden;
   border: 1px solid var(--purple-border);
-  padding: 2rem;
+  padding: 1.4rem 2rem;
+  margin-bottom: 1.5rem;
 }
 .dash-scene-bg {
   position: absolute;
@@ -134,11 +135,12 @@
   color: rgba(196, 181, 253, 0.55);
   filter: drop-shadow(0 0 8px rgba(196, 181, 253, 0.4));
 }
-.dash-scene-glyph--bloom {
-  color: rgba(139, 92, 246, 0.4);
-  filter: blur(0.5px);
-}
 .dash-scene-content { position: relative; z-index: 3; }
+
+/* Everything below the hero band — plain flow, no background image,
+   so it can grow to any height and .main-content's own scrollbar
+   (see index.css) handles it like every other page. */
+.dash-body { display: flex; flex-direction: column; gap: 0; }
 
 .dash-welcome-row {
   display: flex;
@@ -157,42 +159,88 @@
   margin-bottom: 0.4rem;
 }
 .dash-welcome-glyphs .twinkle { animation: twinkle 3s ease-in-out infinite; }
-
-.dash-search-wrap {
-  position: relative;
-  min-width: 220px;
+.welcome-flower-icon {
+  color: #f472b6;
+  filter: drop-shadow(0 0 5px rgba(244, 114, 182, 0.6));
 }
-.dash-search-wrap svg {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  pointer-events: none;
+.welcome-wave-icon {
+  display: inline-block;
+  vertical-align: -4px;
+  color: #fbbf24;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.5));
+  animation: float 2.2s ease-in-out infinite;
 }
-.dash-search-wrap input {
-  width: 100%;
-  background: rgba(10, 6, 30, 0.7);
-  border: 1px solid var(--purple-border);
-  border-radius: 99px;
-  color: var(--text-primary);
-  padding: 0.55rem 0.9rem 0.55rem 2.3rem;
-  font-size: 0.82rem;
-  font-family: inherit;
-  outline: none;
-  transition: border-color var(--transition), box-shadow var(--transition);
-}
-.dash-search-wrap input:focus { border-color: var(--purple-bright); box-shadow: 0 0 0 3px var(--purple-glow-sm); }
 
 .dash-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.15fr 1.15fr 0.85fr;
   gap: 1.25rem;
   margin-bottom: 1.75rem;
   align-items: stretch;
 }
+@media (max-width: 1100px) {
+  .dash-columns { grid-template-columns: 1fr 1fr; }
+  .dash-stat-col { grid-column: 1 / -1; }
+}
 @media (max-width: 860px) {
   .dash-columns { grid-template-columns: 1fr; }
+  .dash-stat-col { grid-column: auto; }
+}
+
+/* ── Stat card column (Active Uploads / Words / Languages / Expiry) ─── */
+.dash-stat-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.dash-stat-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(20, 14, 45, 0.82);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-card);
+  padding: 0.85rem 1rem;
+  backdrop-filter: blur(16px);
+}
+.dash-stat-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+/* The glyph frame from StatGlyphs is built for icon-above-label
+   layouts (see the preview sheet); here it sits icon-left instead, so
+   drop its own bottom margin and shrink it to fit the row. */
+.dash-stat-icon .glyph-frame {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 0;
+}
+.dash-stat-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dash-stat-value {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.dash-stat-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #c9bef0;
+}
+.dash-stat-sub {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 /* ── "Your Bloom" card ──────────────────────────────────────────── */
@@ -226,14 +274,6 @@
 }
 .bloom-stat-num { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); display: block; }
 .bloom-stat-label { font-size: 0.7rem; color: var(--text-muted); }
-
-.bloom-caption {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  border-top: 1px solid var(--purple-border);
-  padding-top: 0.75rem;
-  margin: 0;
-}
 
 /* ── Language Constellation card ───────────────────────────────── */
 .constellation-card {
@@ -281,7 +321,14 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(219, 39, 119, 0.25));
-  font-size: 2.2rem;
+}
+.story-lang-badge {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 1.3rem;
+  letter-spacing: 0.03em;
+  color: var(--badge-color, var(--purple-bright));
+  text-shadow: 0 0 6px var(--badge-color, var(--purple-glow)), 0 0 18px var(--badge-color, var(--purple-glow));
 }
 .story-badge {
   position: absolute;
