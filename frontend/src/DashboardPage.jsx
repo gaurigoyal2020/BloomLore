@@ -255,6 +255,39 @@ function EmptyGarden() {
   );
 }
 
+/** Base-layer starfield — small twinkling ✦ glyphs scattered behind
+    every card on the private dashboard. Positions/sizes/delays are
+    seeded (via the same seededPercent() used for Bloom garden
+    sprites), so they're stable across re-renders, not re-randomized
+    on every render. Purely decorative: aria-hidden, no layout impact
+    since the whole layer is position:absolute behind real content. */
+function Starfield({ count = 26 }) {
+  const stars = Array.from({ length: count }, (_, i) => ({
+    left: seededPercent(i, 11) * 100,
+    top: seededPercent(i, 23) * 100,
+    size: 0.35 + seededPercent(i, 37) * 0.55,
+    delay: seededPercent(i, 51) * 4,
+  }));
+  return (
+    <div className="dash-starfield" aria-hidden="true">
+      {stars.map((s, i) => (
+        <span
+          key={i}
+          className="dash-starfield-star"
+          style={{
+            left: `${s.left}%`,
+            top: `${s.top}%`,
+            fontSize: `${s.size}rem`,
+            animationDelay: `${s.delay}s`,
+          }}
+        >
+          ✦
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /** Logged-in view — every number here comes from the real /api/lessons response. */
 function PrivateDashboard({ session }) {
   const [lessons, setLessons] = useState(null); // null = still loading
@@ -303,52 +336,73 @@ function PrivateDashboard({ session }) {
 
   const recentLessons = (lessons ?? []).slice(0, 6);
 
-  return (
-    <>
-      {/* Compact hero band — background image + floating glyphs are
-          scoped to JUST this welcome banner now, not the whole page.
-          Previously this wrapped everything below too, which (a) made
-          overflow:hidden here clip the page and break scrolling once
-          the stat column made things taller, and (b) meant glyphs
-          positioned by top/bottom % were measured against the whole
-          page's height, so they could drift into card content. */}
-      <div className="dash-hero">
-        <img className="dash-scene-bg" src={heroScene} alt="" aria-hidden="true" />
-        <div className="dash-scene-overlay" aria-hidden="true" />
-        <span className="dash-scene-glyph twinkle" style={{ top: '10px', right: '14px', fontSize: '0.85rem' }} aria-hidden="true">✦</span>
-        <span className="dash-scene-glyph twinkle" style={{ top: '14px', left: '14px', fontSize: '0.6rem', animationDelay: '0.6s' }} aria-hidden="true">✦</span>
-
-        <div className="dash-scene-content">
-          <div className="dash-welcome-row">
-            <div>
-              <div className="dash-welcome-glyphs" aria-hidden="true">
-                <span className="twinkle">✦</span>
-                <Flower2 size={15} className="welcome-flower-icon" />
-              </div>
-              <h1 className="page-title">
-                Welcome back, <span className="accent">{displayName}</span>!{' '}
-                <Hand size={26} className="welcome-wave-icon" />
-              </h1>
-              <p className="page-sub">Your little corner of BloomLore.</p>
-            </div>
-            <Mascot size={52} state="idle" className="header-mascot" />
-          </div>
+  // Shown after the Bloom/Constellation/stats row (or after the empty
+  // garden state) either way — matches the design reference, where
+  // this banner appears in both the populated and dormant-garden
+  // screens, always right before where Recent Stories would go.
+  const breakBarriersHero = (
+    <div className="dash-hero dash-hero--secondary">
+      <div>
+        <h2 className="dash-hero-heading dash-hero-heading--sm">
+          Break language <span className="accent">barriers</span>. Share your story.
+        </h2>
+        <p className="dash-hero-sub">
+          Upload a video and BloomLore will handle the rest — accurate
+          subtitles, translations, and a global audience.
+        </p>
+        <div className="dash-cta-row">
+          <Link to="/upload" className="btn-generate" style={{ width: 'auto', textDecoration: 'none' }}>
+            Upload a Video
+          </Link>
+          <Link to="/activity" className="btn-outline">View Your Activity</Link>
         </div>
       </div>
+      <div className="dash-hero-art">
+        <img src={heroScene} alt="A cozy pixel-art room at night, BloomLore playing on screen" />
+      </div>
+    </div>
+  );
 
-      <div className="dash-body">
-        {error && (
-          <div className="alert-error">
-            <AlertCircle size={16} />
-            <span>{error}</span>
+  return (
+    <div className="dash-page">
+      <Starfield />
+
+      <div className="dash-page-content">
+        {/* Same plain page-header pattern as every other page (see
+            ActivityPage/UploadsPage/SettingsPage/PlanPage) — the image-
+            backed hero band that used to live here is gone per request. */}
+        <div className="page-header">
+          <div>
+            <div className="dash-welcome-glyphs" aria-hidden="true">
+              <span className="twinkle">✦</span>
+              <Flower2 size={15} className="welcome-flower-icon" />
+            </div>
+            <h1 className="page-title">
+              Welcome back, <span className="accent">{displayName}</span>!{' '}
+              <Hand size={26} className="welcome-wave-icon" />
+            </h1>
           </div>
-        )}
+          <Mascot size={52} state="idle" className="header-mascot" />
+        </div>
+
+        <div className="dash-body">
+          {error && (
+            <div className="alert-error">
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
 
         {lessons === null && !error && (
           <p className="field-hint">Loading your dashboard…</p>
         )}
 
-        {lessons?.length === 0 && <EmptyGarden />}
+        {lessons?.length === 0 && (
+          <>
+            <EmptyGarden />
+            {breakBarriersHero}
+          </>
+        )}
 
         {lessons?.length > 0 && (
           <>
@@ -390,6 +444,8 @@ function PrivateDashboard({ session }) {
                 />
               </div>
             </div>
+
+            {breakBarriersHero}
 
             <div className="section-head" style={{ marginBottom: '0.9rem' }}>
               <div>
@@ -437,8 +493,9 @@ function PrivateDashboard({ session }) {
             </div>
           </>
         )}
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 

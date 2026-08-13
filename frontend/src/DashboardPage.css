@@ -65,6 +65,25 @@
 }
 .dash-hero-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
+/* Secondary hero variant — the "Break language barriers" banner
+   reprised mid-page on the private dashboard. Same pattern as the
+   public landing hero above, just smaller since it's not the first
+   thing on the page here. */
+.dash-hero--secondary {
+  margin-bottom: 1.75rem;
+}
+.dash-hero-heading--sm {
+  font-size: 1.5rem;
+  margin-bottom: 0.6rem;
+}
+.dash-hero--secondary .dash-hero-sub {
+  font-size: 0.85rem;
+  margin-bottom: 1.1rem;
+}
+.dash-hero--secondary .dash-hero-art {
+  box-shadow: 0 0 28px var(--purple-glow-sm);
+}
+
 .dash-feature-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -97,59 +116,35 @@
 .dash-feature-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
 
 /* ══════════════════ Private (logged-in) dashboard ═════════════════ */
-/* Compact welcome hero band — pixel-art backdrop + dark overlay +
-   a couple of corner sparkles, scoped to JUST the welcome row. This
-   used to wrap the entire page (see git history), which both broke
-   scrolling (overflow:hidden on a container that grew taller than the
-   viewport once the stat column was added) and let the floating
-   glyphs' top/bottom % positions drift into card content below. Now
-   the band is exactly as tall as its own content, so neither can
-   happen — .dash-body below is a plain sibling, not a child. */
-.dash-hero {
-  position: relative;
-  border-radius: var(--radius-card);
-  overflow: hidden;
-  border: 1px solid var(--purple-border);
-  padding: 1.4rem 2rem;
-  margin-bottom: 1.5rem;
-}
-.dash-scene-bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 0;
-}
-.dash-scene-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background:
-    linear-gradient(180deg, rgba(8, 6, 26, 0.88) 0%, rgba(8, 6, 26, 0.93) 40%, rgba(8, 6, 26, 0.97) 100%);
-}
-.dash-scene-glyph {
-  position: absolute;
-  z-index: 2;
-  pointer-events: none;
-  color: rgba(196, 181, 253, 0.55);
-  filter: drop-shadow(0 0 8px rgba(196, 181, 253, 0.4));
-}
-.dash-scene-content { position: relative; z-index: 3; }
 
-/* Everything below the hero band — plain flow, no background image,
+/* Base-layer starfield — small twinkling ✦ glyphs scattered across the
+   whole private dashboard, behind every card/section. .dash-page is
+   the positioning context; .dash-starfield is one absolutely-placed
+   layer at z-index 0, and .dash-page-content (everything real) sits
+   at z-index 1 on top of it. Positions come from the same seeded
+   pseudo-random helper used for the Bloom garden sprites, so they're
+   stable across re-renders instead of jumping around. */
+.dash-page { position: relative; }
+.dash-starfield {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.dash-starfield-star {
+  position: absolute;
+  color: rgba(196, 181, 253, 0.55);
+  filter: drop-shadow(0 0 6px rgba(196, 181, 253, 0.4));
+  animation: twinkle 3.4s ease-in-out infinite;
+}
+.dash-page-content { position: relative; z-index: 1; }
+
+/* Everything below the header — plain flow, no background image,
    so it can grow to any height and .main-content's own scrollbar
    (see index.css) handles it like every other page. */
 .dash-body { display: flex; flex-direction: column; gap: 0; }
 
-.dash-welcome-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.75rem;
-}
 .dash-welcome-glyphs {
   display: flex;
   align-items: center;
