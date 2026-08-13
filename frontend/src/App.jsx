@@ -9,7 +9,6 @@ import LessonDetailPage from './LessonDetailPage';
 import DashboardPage from './DashboardPage';
 import PlanPage from './PlanPage';
 import SettingsPage from './SettingsPage';
-import ComingSoonPage from './ComingSoonPage';
 import { supabase } from './supabaseClient';
 import './index.css';
 
@@ -106,15 +105,6 @@ function App() {
           <Route path="upload" element={<UploadsPage />} />
           <Route path="activity" element={<ActivityPage />} />
           <Route path="activity/:id" element={<LessonDetailPage />} />
-          <Route
-            path="subtitles"
-            element={
-              <ComingSoonPage
-                title="Subtitles"
-                description="Search and browse subtitles across all your videos — coming soon."
-              />
-            }
-          />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

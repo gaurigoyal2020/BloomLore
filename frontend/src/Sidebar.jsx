@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import {
   Upload, LayoutDashboard, FolderOpen,
-  Captions, Settings, CreditCard, LogOut
+  Settings, CreditCard, LogOut
 } from 'lucide-react';
 import Mascot from './Mascot';
 import { getLessons } from './api';
@@ -11,7 +11,6 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard',    to: '/',         public: true  },
   { icon: FolderOpen,      label: 'Your Activity', to: '/activity', public: false },
   { icon: Upload,          label: 'Uploads',      to: '/upload',    public: false },
-  { icon: Captions,        label: 'Subtitles',    to: '/subtitles', public: false },
   { icon: CreditCard,      label: 'My Plan',      to: '/plan',      public: true  },
   { icon: Settings,        label: 'Settings',     to: '/settings',  public: true  },
 ];
@@ -43,8 +42,8 @@ const Sidebar = ({ mascotState, userEmail, onLogout, session }) => {
     <nav className="sidebar-nav">
       {/* Logged-out visitors only get the routes that actually work
           without a session (matches the `public` routes in App.jsx —
-          Upload/Activity/Subtitles all redirect to /login anyway, so
-          there's no point showing them as options before that). */}
+          Upload/Activity both redirect to /login anyway, so there's
+          no point showing them as options before that). */}
       {navItems.filter((item) => item.public || session).map(({ icon: Icon, label, to }) => (
         // NavLink instead of a plain <div>: 'active' used to be
         // hardcoded to whichever page happened to be written directly
