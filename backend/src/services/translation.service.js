@@ -20,15 +20,72 @@ const REQUEST_TIMEOUT = 12_000;
 // since DeepL's free credit is a one-time, non-renewing budget (see
 // translateText below for why the order matters here).
 
+// MyMemory's free/anonymous tier caps each request at 500 characters.
+// text.substring(0, 500) used to just silently cut everything after that
+// off — for any transcript longer than ~500 chars (a few sentences),
+// only the first slice ever got translated. Downstream,
+// buildTranslatedChunks (subtitle.service.js) spreads THAT short
+// translated string proportionally across every original timing chunk,
+// so once the real translated words ran out, every later subtitle cue
+// got an empty string — the video's subtitles cutting off partway
+// through that the user reported.
+//
+// Fix: split the transcript into <=500-char pieces at sentence (then
+// word) boundaries, translate each piece separately, and rejoin them in
+// order. The combined string is still proportional to the full
+// transcript, so buildTranslatedChunks' word-distribution logic (which
+// we're not touching) covers the whole video again.
+const MYMEMORY_MAX_CHARS = 500;
+
+export function chunkTextForTranslation(text, maxChars = MYMEMORY_MAX_CHARS) {
+  const chunks = [];
+  let remaining = text.trim();
+
+  while (remaining.length > maxChars) {
+    // Prefer breaking at the end of a sentence within the limit — keeps
+    // each request grammatically self-contained, which MyMemory
+    // translates more reliably than a mid-sentence fragment.
+    let breakAt = -1;
+    for (const punct of [". ", "! ", "? "]) {
+      const idx = remaining.lastIndexOf(punct, maxChars);
+      if (idx > breakAt) breakAt = idx + punct.length - 1;
+    }
+    // No sentence boundary in range — fall back to the last word boundary.
+    if (breakAt <= 0) breakAt = remaining.lastIndexOf(" ", maxChars);
+    // No spaces either (one giant token) — hard cut as a last resort.
+    if (breakAt <= 0) breakAt = maxChars - 1;
+
+    chunks.push(remaining.slice(0, breakAt + 1).trim());
+    remaining = remaining.slice(breakAt + 1).trim();
+  }
+
+  if (remaining) chunks.push(remaining);
+  return chunks;
+}
+
 async function tryMyMemory(text, source, target) {
-  const response = await axios.get("https://api.mymemory.translated.net/get", {
-    params: { q: text.substring(0, 500), langpair: `${source}|${target}` },
-    timeout: REQUEST_TIMEOUT,
-  });
-  const result = response.data?.responseData?.translatedText;
-  // MyMemory returns the original text when it fails — treat that as a miss
-  if (!result || result === text) return null;
-  return result;
+  const chunks = chunkTextForTranslation(text);
+  const translatedChunks = [];
+
+  // Sequential, not Promise.all — MyMemory's anonymous tier is rate
+  // limited per IP, and a long transcript can mean a dozen+ chunks.
+  // Firing them all at once risks tripping that limit; one at a time
+  // costs a little wall-clock time but stays well under it.
+  for (const chunk of chunks) {
+    const response = await axios.get("https://api.mymemory.translated.net/get", {
+      params: { q: chunk, langpair: `${source}|${target}` },
+      timeout: REQUEST_TIMEOUT,
+    });
+    const result = response.data?.responseData?.translatedText;
+    // MyMemory returns the original text when it fails — treat that as
+    // a miss for the WHOLE transcript (not just this chunk), same as
+    // before: a partial translation stitched together with untranslated
+    // fragments is worse than falling through to the DeepL fallback.
+    if (!result || result === chunk) return null;
+    translatedChunks.push(result);
+  }
+
+  return translatedChunks.join(" ");
 }
 
 async function tryDeepL(text, source, target) {

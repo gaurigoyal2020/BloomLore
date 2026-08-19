@@ -19,6 +19,15 @@ export const transcribeAudio = async (audioPath) => {
           "Content-Type": "audio/mp3",
         },
         params: {
+          // Without an explicit `model`, Deepgram falls back to its
+          // oldest/default model ("base") — noticeably less accurate
+          // than what's actually available. nova-3 is Deepgram's current
+          // general-purpose model: better accuracy, still supports
+          // detect_language below, and is billed from the same account
+          // credit (no separate opt-in or extra cost — see translation
+          // .service.js's header comment for the same "free tier"
+          // reasoning applied to MyMemory/DeepL).
+          model: "nova-3",
           smart_format: true,
           punctuate: true,
           detect_language: true,
