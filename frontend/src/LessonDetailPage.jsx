@@ -45,6 +45,7 @@ function LessonDetailPage() {
       result={result}
       file={result.originalFilename ? { name: result.originalFilename } : undefined}
       targetLang={result.targetLang}
+      session={session}
       // Breadcrumb in ResultsPage says "Activity" and calls onReset —
       // here that should navigate back to the history list, not clear
       // an upload form (there isn't one on this page).

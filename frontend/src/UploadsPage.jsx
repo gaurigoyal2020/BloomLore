@@ -231,6 +231,7 @@ function UploadsPage() {
         result={result}
         file={file}
         targetLang={targetLang}
+        session={session}
         onReset={resetForm}
       />
     );

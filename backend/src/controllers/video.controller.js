@@ -35,6 +35,7 @@ export const uploadVideo = async (req, res, next) => {
       videoPath: req.file.path,
       targetLang,
       originalName: req.file.originalname,
+      fileSize: req.file.size, // bytes — multer already gives us this for free
       userId: req.user.id,
     });
 

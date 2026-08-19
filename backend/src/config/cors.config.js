@@ -13,6 +13,9 @@ export const corsConfig = cors({
     callback(new Error(`CORS: origin '${origin}' is not allowed`));
   },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  // PATCH added for PATCH /api/lessons/:id (subtitle edits) — every other
+  // route in this app used GET/POST, so PATCH was never in this list
+  // before and the browser's CORS preflight check rejected it outright.
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 });

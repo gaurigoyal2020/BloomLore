@@ -109,3 +109,35 @@ export async function getLessonDetail(id, accessToken) {
   const body = await res.json();
   return body.data;
 }
+
+/**
+ * PATCH /api/lessons/:id — saves edited subtitle text. Pass ONE of the two
+ * fields depending on which track is being edited:
+ *   updateLessonSubtitles(id, { subtitles: [...] }, token)              — original
+ *   updateLessonSubtitles(id, { translatedSubtitles: [...] }, token)    — translated
+ * Each cue must be { start, end, text } — only `text` is meant to change;
+ * start/end should be passed through unmodified from what was fetched.
+ * Returns the updated lesson, shaped the same as getLessonDetail/getJobStatus.
+ */
+export async function updateLessonSubtitles(id, payload, accessToken) {
+  const res = await fetch(`${BASE_URL}/api/lessons/${id}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (res.status === 401) throw new Error("Your session expired — please log in again.");
+  if (res.status === 404) throw new Error("This video wasn't found — it may have expired.");
+  if (!res.ok) {
+    let message = "Failed to save subtitle edits";
+    try {
+      const body = await res.json();
+      message = body.error ?? message;
+    } catch { /* ignore */ }
+    throw new Error(message);
+  }
+  const body = await res.json();
+  return body.data;
+}

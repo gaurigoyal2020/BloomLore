@@ -81,3 +81,16 @@ export const generateWebVTT = (words, outputPath, translatedText = null) => {
 
   return { original: vttPath, translated: translatedVttPath };
 };
+
+/**
+ * Builds WebVTT text directly from an array of already-formed
+ * { start, end, text } cues, rather than from Deepgram's raw word-level
+ * timing (that's what generateWebVTT/groupWordsIntoChunks are for). Used
+ * when a user EDITS subtitle text via ResultsPage: the timing already
+ * exists and isn't changing, only the text per cue is. Reuses the same
+ * buildVTT formatter so an edited file comes out byte-for-byte the same
+ * style as a freshly-generated one.
+ */
+export function cuesToVTT(cues) {
+  return buildVTT(cues, (cue) => cue.text);
+}

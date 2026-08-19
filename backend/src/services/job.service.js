@@ -49,7 +49,7 @@ const timedStage = async (label, fn) => {
  * handler that calls this only has to wait for createJob() to return
  * (near-instant), not for the whole pipeline.
  */
-export const createJob = ({ jobId, videoPath, targetLang, originalName, userId }) => {
+export const createJob = ({ jobId, videoPath, targetLang, originalName, fileSize, userId }) => {
   jobs.set(jobId, {
     id: jobId,
     userId,
@@ -60,7 +60,7 @@ export const createJob = ({ jobId, videoPath, targetLang, originalName, userId }
     createdAt: Date.now(),
   });
 
-  pendingQueue.push({ jobId, videoPath, targetLang, originalName });
+  pendingQueue.push({ jobId, videoPath, targetLang, originalName, fileSize });
 
   // Safe to call even if a worker is already chewing through the queue —
   // runWorker() checks isWorkerRunning and no-ops if so.
@@ -97,7 +97,7 @@ async function runWorker() {
  * only *when* and *where*: this now runs in the background and updates
  * the job's `stage` as it goes, instead of blocking a live HTTP response.
  */
-async function processJob({ jobId, videoPath, targetLang, originalName }) {
+async function processJob({ jobId, videoPath, targetLang, originalName, fileSize }) {
   const job = jobs.get(jobId);
   const pipelineStart = Date.now();
   const outputPath = `./uploads/courses/${jobId}`;
@@ -203,6 +203,7 @@ async function processJob({ jobId, videoPath, targetLang, originalName }) {
       // that parity was only true for history views, not the live-poll
       // result a user sees right after uploading.
       originalFilename: originalName,
+      fileSize, // bytes — from multer's req.file.size, see video.controller.js
       originalLang: detectedLang,
       targetLang,
       wordCount: words.length,
@@ -229,6 +230,7 @@ async function processJob({ jobId, videoPath, targetLang, originalName }) {
       subtitles: subtitleCues,
       translatedSubtitles: translatedCues,
       originalFilename: originalName,
+      fileSize,
       originalLang: detectedLang,
       targetLang,
       wordCount: words.length,

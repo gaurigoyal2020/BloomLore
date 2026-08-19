@@ -81,6 +81,36 @@ export async function getLessonById(id, userId) {
   return data;
 }
 
+/**
+ * Updates the subtitle-cue column(s) on a lesson the user owns — used by
+ * PATCH /api/lessons/:id when a user edits subtitle text. Only touches
+ * whichever of `subtitles`/`translatedSubtitles` was actually passed, so a
+ * request that only edits one track doesn't clobber the other. Same
+ * "filter by user_id, don't trust the caller" ownership check as every
+ * other lesson query — a request for a lesson that exists but belongs to
+ * someone else updates zero rows and returns null, same as a lesson that
+ * doesn't exist at all.
+ */
+export async function updateLessonSubtitleCues(id, userId, { subtitles, translatedSubtitles }) {
+  const patch = {};
+  if (subtitles !== undefined) patch.subtitles = subtitles;
+  if (translatedSubtitles !== undefined) patch.translated_subtitles = translatedSubtitles;
+
+  const { data, error } = await supabaseAdmin
+    .from("lessons")
+    .update(patch)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    logger.error("Failed to update lesson subtitles", { id, error: error.message });
+    throw error;
+  }
+  return data;
+}
+
 export async function insertLesson({
   jobId,
   userId,
@@ -92,6 +122,7 @@ export async function insertLesson({
   subtitles,
   translatedSubtitles,
   originalFilename,
+  fileSize,
   originalLang,
   targetLang,
   wordCount,
@@ -107,6 +138,10 @@ export async function insertLesson({
     subtitles,
     translated_subtitles: translatedSubtitles,
     original_filename: originalFilename,
+    file_size: fileSize, // bytes — this is req.file.size from multer,
+    // captured at upload time in video.controller.js since it's never
+    // otherwise recoverable afterward (not derivable from anything
+    // stored on R2 or elsewhere).
     original_lang: originalLang,
     target_lang: targetLang,
     word_count: wordCount,

@@ -79,6 +79,25 @@ export async function uploadDirectoryToR2(localDirPath, keyPrefix) {
 }
 
 /**
+ * Uploads a single piece of content (a string or Buffer, not a file on
+ * disk) directly to R2 at an exact key. Used when only one file needs to
+ * change — e.g. regenerating subtitles.vtt after a user edits subtitle
+ * text — rather than re-running uploadDirectoryToR2 over an entire course
+ * directory whose video segments and other subtitle file didn't change.
+ */
+export async function uploadFileToR2(key, body, contentType) {
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: env.r2BucketName,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
+  logger.info("Uploaded single file to R2", { key });
+}
+
+/**
  * Deletes every object under a given key prefix — e.g. everything under
  * "courses/{jobId}/" (the playlist, every .ts segment, both subtitle
  * files). Used by the cleanup cron once a lesson's 24h expiry has
