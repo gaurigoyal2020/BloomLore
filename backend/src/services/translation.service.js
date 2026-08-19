@@ -61,7 +61,19 @@ async function tryDeepL(text, source, target) {
 
 /**
  * Translate text from sourceLang to targetLang.
- * Tries providers in order, returns original text if all fail.
+ * Tries providers in order.
+ *
+ * Returns { text, status } rather than just a string — the caller (and
+ * ultimately the frontend) needs to tell apart three different outcomes
+ * that all used to look identical (translatedText === original text):
+ *   - 'skipped'  — source and target languages are the same; nothing to do.
+ *   - 'success'  — a provider actually translated the text.
+ *   - 'failed'   — a translation genuinely SHOULD have happened but every
+ *                  provider errored out or returned nothing usable, so we
+ *                  fell back to the original text as a last resort.
+ * Without this, 'failed' silently looked exactly like 'skipped' to every
+ * downstream consumer, and the frontend had no way to tell a user "this
+ * didn't actually get translated" instead of showing it as Completed.
  */
 export const translateText = async (text, sourceLang, targetLang) => {
   const source = normalizeLang(sourceLang);
@@ -69,7 +81,7 @@ export const translateText = async (text, sourceLang, targetLang) => {
 
   if (source === target || !text.trim()) {
     logger.debug("Translation skipped (same language or empty)");
-    return text;
+    return { text, status: "skipped" };
   }
 
   // MyMemory first: free and resets on its own, so no reason to conserve it.
@@ -86,7 +98,7 @@ export const translateText = async (text, sourceLang, targetLang) => {
       const result = await fn();
       if (result) {
         logger.info(`Translation successful via ${name}`, { source, target });
-        return result;
+        return { text: result, status: "success" };
       }
     } catch (err) {
       logger.warn(`${name} translation failed`, { message: err.message });
@@ -94,5 +106,5 @@ export const translateText = async (text, sourceLang, targetLang) => {
   }
 
   logger.warn("All translation providers failed — returning original text");
-  return text;
+  return { text, status: "failed" };
 };

@@ -122,7 +122,22 @@ const ResultsPage = ({ result, file, targetLang, onReset }) => {
   const filtered   = subtitles.filter(s => s.text.toLowerCase().includes(searchQ.toLowerCase()));
   const langCode   = result?.originalLang || 'en';
   const targetCode = targetLang || result?.targetLang || 'en';
-  const fileName   = file?.name?.replace(/\.[^.]+$/, '') || 'My Awesome Video';
+  // The backend now only sets translatedSubtitleUrl when a translation
+  // actually succeeded (see job.service.js) — same-language uploads and
+  // genuine provider failures both used to look identical here (a
+  // truthy translatedText equal to the transcript), so this card had no
+  // way to tell "nothing to translate" apart from "translation broke".
+  const translationRequested = langCode !== targetCode;
+  const translationSucceeded = !!result?.translatedSubtitleUrl;
+  const translationFailed    = translationRequested && !translationSucceeded;
+  // result.originalFilename is now returned by both the live job-status
+  // poll and lesson history (see job.service.js) — preferring it over the
+  // client-side `file` prop means the name shown is the same regardless
+  // of whether this is a fresh upload, a job resumed after a page
+  // refresh (where `file` is only ever a name/size stand-in), or a past
+  // lesson. `file?.name` stays as a fallback for the brief window right
+  // after upload before a job result exists at all.
+  const fileName   = (result?.originalFilename || file?.name)?.replace(/\.[^.]+$/, '') || 'My Awesome Video';
   const fileSizeMB = file?.size ? (file.size / (1024 * 1024)).toFixed(2) : '—';
   const wordCount  = result?.wordCount || subtitles.length * 8;
 
@@ -387,7 +402,7 @@ const ResultsPage = ({ result, file, targetLang, onReset }) => {
               </div>
             </div>
 
-            {result?.translatedText
+            {translationSucceeded
               ? [targetCode, 'ko', 'es'].slice(0, 3).map((code, i) => (
                 <div key={code} className="rp-trans-row">
                   <span className="rp-trans-flag">{FLAG[code] || '🌍'}</span>
@@ -402,7 +417,12 @@ const ResultsPage = ({ result, file, targetLang, onReset }) => {
                   )}
                 </div>
               ))
-              : (
+              : translationFailed ? (
+                <p className="rp-no-trans">
+                  Translation to {LANG_NAME[targetCode] || targetCode} couldn&rsquo;t be completed —
+                  showing original-language subtitles instead. You can try re-uploading.
+                </p>
+              ) : (
                 <p className="rp-no-trans">No translations available for this upload.</p>
               )
             }

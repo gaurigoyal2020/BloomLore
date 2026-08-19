@@ -55,6 +55,32 @@ const STAGE_PROGRESS = {
 };
 const POLL_INTERVAL_MS = 2000;
 
+// A jobId used to live only in this component's React state — refresh the
+// tab mid-processing and the frontend lost the thread entirely (the
+// backend job kept running, but nothing on screen could reconnect to it,
+// so it silently reset to a blank upload form). Persisting just enough to
+// resume the poll survives a refresh, a closed tab, or React StrictMode's
+// double-mount. Not tied to any particular user id: this is a single-user
+// browser session's own in-progress upload, and the backend's own
+// requireAuth/ownership checks are the real source of truth for who a
+// jobId belongs to — this is purely "what was *I* doing" state.
+const ACTIVE_JOB_KEY = 'bloomlore:activeJob';
+
+function saveActiveJob(jobId, fileName, fileSize) {
+  try {
+    localStorage.setItem(ACTIVE_JOB_KEY, JSON.stringify({ jobId, fileName, fileSize }));
+  } catch { /* localStorage unavailable (private browsing, etc) — resume just won't work */ }
+}
+function loadActiveJob() {
+  try {
+    const raw = localStorage.getItem(ACTIVE_JOB_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function clearActiveJob() {
+  try { localStorage.removeItem(ACTIVE_JOB_KEY); } catch { /* ignore */ }
+}
+
 function UploadsPage() {
   const { session, setMascotState } = useOutletContext();
 
@@ -76,6 +102,30 @@ function UploadsPage() {
     setMascotState(uploading ? 'active' : result ? 'done' : 'idle');
     return () => setMascotState('idle');
   }, [uploading, result, setMascotState]);
+
+  // On mount, pick back up any job that was still processing when this
+  // page last unloaded. The real File object is gone (files can't survive
+  // a refresh), so `file` is reconstructed as a name/size-only stand-in —
+  // same pattern LessonDetailPage already uses for history items, and
+  // ResultsPage/ProcessingPage only ever read .name/.size off it anyway.
+  useEffect(() => {
+    const saved = loadActiveJob();
+    if (!saved) return;
+
+    setFile({ name: saved.fileName, size: saved.fileSize });
+    setUploading(true);
+    setProgress((prev) => Math.max(prev, 15));
+
+    pollUntilDone(saved.jobId).catch((err) => {
+      setError(err.message || 'Failed to process video. Please try again.');
+      setUploading(false);
+      setProgress(0);
+      clearActiveJob();
+    });
+    // Intentionally run once on mount only — this is a one-time resume
+    // check, not something that should re-fire as other state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── Drag handlers ── */
   const handleDrag = (e) => {
@@ -110,8 +160,14 @@ function UploadsPage() {
         setProgress((prev) => Math.max(prev, Math.round(pct * 0.15)));
       });
 
+      // Saved the moment the backend confirms the job exists — from here
+      // on, a refresh should resume watching this job instead of losing
+      // track of it and dropping back to a blank upload form.
+      saveActiveJob(jobId, file.name, file.size);
+
       await pollUntilDone(jobId);
     } catch (err) {
+      clearActiveJob();
       setError(err.message || 'Failed to process video. Please try again.');
       setUploading(false);
       setProgress(0);
@@ -132,6 +188,7 @@ function UploadsPage() {
           const status = await getJobStatus(jobId, data.session.access_token);
 
           if (status.status === 'error') {
+            clearActiveJob();
             reject(new Error(status.error || 'Processing failed'));
             return;
           }
@@ -139,6 +196,7 @@ function UploadsPage() {
           setProgress(STAGE_PROGRESS[status.stage] ?? 15);
 
           if (status.status === 'complete') {
+            clearActiveJob();
             setResult(status.result);
             setTimeout(() => setUploading(false), 500);
             resolve();
@@ -156,6 +214,7 @@ function UploadsPage() {
 
   /* ── Reset ── */
   const resetForm = () => {
+    clearActiveJob();
     setFile(null); setResult(null);
     setError(null); setProgress(0); setUploading(false);
   };

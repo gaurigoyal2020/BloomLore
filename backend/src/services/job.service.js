@@ -121,15 +121,29 @@ async function processJob({ jobId, videoPath, targetLang, originalName }) {
     );
 
     job.stage = "translating";
-    const translatedText = await timedStage("translation", () =>
-      translateText(transcript, detectedLang, targetLang)
+    // translationStatus: 'skipped' (source === target, nothing to do),
+    // 'success' (a provider actually translated it), or 'failed' (every
+    // provider errored — translatedText falls back to the original text).
+    // Everything downstream (VTT generation, cue building, the URL sent
+    // to the frontend) keys off this status now instead of comparing
+    // translatedText to transcript by string equality, which couldn't
+    // tell 'skipped' apart from 'failed' — both just look like "same text".
+    const { text: translatedText, status: translationStatus } = await timedStage(
+      "translation",
+      () => translateText(transcript, detectedLang, targetLang)
     );
+    const translationSucceeded = translationStatus === "success";
 
     logger.info("Transcript", { detectedLang, chars: transcript.length });
-    logger.debug("Translated", { targetLang, chars: translatedText.length });
+    logger.debug("Translated", { targetLang, translationStatus, chars: translatedText.length });
 
     job.stage = "building-subtitles";
-    generateWebVTT(words, outputPath, translatedText);
+    // Only generate/upload a translated VTT file when a translation
+    // genuinely happened — previously this ran unconditionally (since
+    // translatedText is always a truthy string), writing and uploading a
+    // subtitles-translated.vtt file to R2 even on 'skipped'/'failed' jobs,
+    // which the frontend never even linked to.
+    generateWebVTT(words, outputPath, translationSucceeded ? translatedText : null);
 
     const chunks = groupWordsIntoChunks(words);
     const subtitleCues = chunks.map((chunk) => ({
@@ -137,10 +151,9 @@ async function processJob({ jobId, videoPath, targetLang, originalName }) {
       end: chunk.end,
       text: chunk.words.join(" "),
     }));
-    const translatedCues =
-      translatedText !== transcript
-        ? buildTranslatedChunks(chunks, translatedText)
-        : null;
+    const translatedCues = translationSucceeded
+      ? buildTranslatedChunks(chunks, translatedText)
+      : null;
 
     // Original upload no longer needed once ffmpeg has read from it.
     deleteFile(videoPath);
@@ -162,8 +175,9 @@ async function processJob({ jobId, videoPath, targetLang, originalName }) {
     );
     const videoUrl = `${base}/index.m3u8`;
     const subtitleUrl = `${base}/subtitles.vtt`;
-    const translatedSubtitleUrl =
-      translatedText !== transcript ? `${base}/subtitles-translated.vtt` : null;
+    const translatedSubtitleUrl = translationSucceeded
+      ? `${base}/subtitles-translated.vtt`
+      : null;
 
     // Local disk was only ever scratch space for ffmpeg to write into —
     // R2 is the actual permanent home for these files now. No reason to
@@ -182,6 +196,13 @@ async function processJob({ jobId, videoPath, targetLang, originalName }) {
       translatedSubtitleUrl,
       transcript,
       translatedText,
+      // Was missing here even though lessons.controller.js's getLesson
+      // response includes it and its own comment claims the two shapes
+      // match exactly ("so ResultsPage can render it without needing to
+      // know whether it came from a live job or history") — without this,
+      // that parity was only true for history views, not the live-poll
+      // result a user sees right after uploading.
+      originalFilename: originalName,
       originalLang: detectedLang,
       targetLang,
       wordCount: words.length,
