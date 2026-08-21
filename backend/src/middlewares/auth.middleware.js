@@ -59,9 +59,18 @@ export async function requireAuth(req, res, next) {
   }
 
   try {
+    const verifyStart = Date.now();
     const { payload } = await jwtVerify(token, getJWKS(), {
       issuer: `${env.supabaseUrl}/auth/v1`,
       audience: "authenticated", // Supabase sets this for logged-in users
+    });
+    // Cheap to log always (not just on slow requests) — this call is
+    // either near-instant (JWKS already cached) or a real network round
+    // trip to Supabase (first request after server start, or after the
+    // cache's TTL expires). Having both numbers in the logs is what lets
+    // "dashboard is slow" actually get diagnosed instead of guessed at.
+    logger.debug("[timing] JWT verify", {
+      ms: Date.now() - verifyStart,
     });
 
     req.user = { id: payload.sub, email: payload.email };

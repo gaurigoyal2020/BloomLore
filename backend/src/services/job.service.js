@@ -114,6 +114,23 @@ async function processJob({ jobId, videoPath, targetLang, originalName, fileSize
       processVideo(videoPath, outputPath, hlsPath, audioPath)
     );
 
+    // The HLS video (playlist + segments) is fully written to disk at
+    // this point and doesn't depend on anything transcription/
+    // translation produce — so instead of waiting for those network-
+    // bound stages to finish before uploading it, start the upload now
+    // and let it run IN THE BACKGROUND while transcription/translation
+    // happen. Deepgram is off computing on its own servers, and the
+    // MyMemory/DeepL calls are small text requests — neither competes
+    // meaningfully with this upload for local bandwidth, so this is
+    // genuine parallelism, not just optimistic scheduling. Only .vtt
+    // files (which don't exist yet) are uploaded later, once they're
+    // actually generated — see the Promise.all near the bottom of this
+    // function. Awaited later, not here — a rejection here still
+    // propagates to the same try/catch this function already has.
+    const videoUploadPromise = timedStage("upload video to R2 (background)", () =>
+      uploadDirectoryToR2(outputPath, `courses/${jobId}`, { extensions: [".m3u8", ".ts"] })
+    );
+
     job.stage = "transcribing";
     const { transcript, words, detectedLang } = await timedStage(
       "transcription (Deepgram)",
@@ -160,9 +177,10 @@ async function processJob({ jobId, videoPath, targetLang, originalName, fileSize
 
     // audio.mp3 was only ever an internal artifact for Deepgram — it was
     // never part of what the frontend serves, so it shouldn't go to R2
-    // at all. Deleting it here (rather than filtering it out during
-    // upload) keeps uploadDirectoryToR2 simple: it can just upload
-    // everything it finds, no exclusion-list logic needed.
+    // at all. Both uploadDirectoryToR2 calls above/below already filter
+    // to specific extensions ([".m3u8", ".ts"] and [".vtt"]), so audio.mp3
+    // was never going to be picked up regardless — this delete is just
+    // disk cleanup, not what's keeping it off R2.
     deleteFile(audioPath);
 
     logger.info("[timing] TOTAL", {
@@ -170,9 +188,19 @@ async function processJob({ jobId, videoPath, targetLang, originalName, fileSize
     });
 
     job.stage = "uploading";
-    const base = await timedStage("upload to R2", () =>
-      uploadDirectoryToR2(outputPath, `courses/${jobId}`)
-    );
+    // Both uploads happen concurrently here: the subtitle upload is
+    // starting fresh (the .vtt files were just written above), while
+    // the video upload has likely been running since the transcribing
+    // stage and may already be done or close to it — either way,
+    // Promise.all waits for whichever is slower rather than adding the
+    // two durations together the way the old single sequential upload
+    // effectively did.
+    const [base] = await Promise.all([
+      videoUploadPromise,
+      timedStage("upload subtitles to R2", () =>
+        uploadDirectoryToR2(outputPath, `courses/${jobId}`, { extensions: [".vtt"] })
+      ),
+    ]);
     const videoUrl = `${base}/index.m3u8`;
     const subtitleUrl = `${base}/subtitles.vtt`;
     const translatedSubtitleUrl = translationSucceeded

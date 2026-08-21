@@ -34,19 +34,25 @@ const CONTENT_TYPES = {
 };
 
 /**
- * Uploads every file in a local directory (non-recursive — the HLS
- * output directory is flat: one .m3u8, several .ts segments, one or two
- * .vtt files) to R2 under the given key prefix, then returns the base
- * public URL those files now live at.
+ * Uploads files in a local directory (non-recursive — the HLS output
+ * directory is flat: one .m3u8, several .ts segments, one or two .vtt
+ * files) to R2 under the given key prefix, then returns the base public
+ * URL those files now live at.
  *
- * Called ONCE per job, after ffmpeg/transcription/translation/subtitle
- * generation have all already finished writing their output locally.
+ * By default uploads everything in the directory. Pass `extensions` to
+ * upload only a subset — used by job.service.js to kick off the (large)
+ * HLS video upload as soon as ffmpeg finishes, running it concurrently
+ * with transcription/translation instead of waiting for those to finish
+ * first, then uploading just the (small) .vtt files once they exist.
  * Local disk is just scratch space here — R2 is the actual permanent
  * home for these files (with lifecycle rules deleting them after 24h,
  * once that's set up on the bucket).
  */
-export async function uploadDirectoryToR2(localDirPath, keyPrefix) {
-  const files = await fs.readdir(localDirPath);
+export async function uploadDirectoryToR2(localDirPath, keyPrefix, { extensions } = {}) {
+  const allFiles = await fs.readdir(localDirPath);
+  const files = extensions
+    ? allFiles.filter((filename) => extensions.includes(path.extname(filename)))
+    : allFiles;
 
   // PutObjectCommand with a Buffer body instead of lib-storage's Upload
   // helper with a stream. The difference: a Buffer has a known length up

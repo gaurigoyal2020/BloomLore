@@ -46,7 +46,18 @@ function shapeLesson(lesson) {
 
 /** GET /api/lessons — the current user's upload history, newest first. */
 export const listLessons = async (req, res) => {
+  const start = Date.now();
   const lessons = await getLessonsForUser(req.user.id);
+  // Isolates the DB round-trip specifically — combined with the JWT
+  // verify timing in auth.middleware.js, this is enough to tell whether
+  // a slow dashboard load is the Supabase query, the auth check, or
+  // neither (i.e. genuinely just the two sequential network hops
+  // themselves, browser→backend→Supabase, on a slow connection).
+  logger.debug("[timing] listLessons query", {
+    ms: Date.now() - start,
+    userId: req.user.id,
+    count: lessons.length,
+  });
   res.status(200).json({ success: true, data: { lessons } });
 };
 
