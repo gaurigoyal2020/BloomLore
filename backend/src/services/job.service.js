@@ -1,4 +1,5 @@
 import { processVideo } from "./ffmpeg.service.js";
+import { validateVideoFile } from "./video-validation.service.js";
 import { transcribeAudio } from "./transcription.service.js";
 import { translateText } from "./translation.service.js";
 import {
@@ -8,6 +9,7 @@ import {
 } from "./subtitle.service.js";
 import { uploadDirectoryToR2 } from "./storage.service.js";
 import { insertLesson } from "./db.service.js";
+import { env } from "../config/env.config.js";
 import { ensureDirectoryExists, deleteFile, deleteDirectory } from "../utils/file.utils.js";
 import { logger } from "../utils/logger.js";
 
@@ -109,6 +111,15 @@ async function processJob({ jobId, videoPath, targetLang, originalName, fileSize
     logger.info("Processing video", { jobId, originalName });
     ensureDirectoryExists(outputPath);
 
+    job.stage = "validating";
+    // Runs BEFORE ffmpeg sees the file. multer's fileFilter already
+    // checked the client-declared Content-Type, but that header is
+    // client-controlled and proves nothing about the file's actual
+    // bytes — this is the real check, based on what the file actually
+    // contains, and it also enforces duration/resolution/stream-count
+    // limits that a MIME-type check has no way to express at all.
+    await validateVideoFile(videoPath);
+
     job.stage = "converting";
     await timedStage("ffmpeg (HLS + audio)", () =>
       processVideo(videoPath, outputPath, hlsPath, audioPath)
@@ -195,12 +206,20 @@ async function processJob({ jobId, videoPath, targetLang, originalName, fileSize
     // Promise.all waits for whichever is slower rather than adding the
     // two durations together the way the old single sequential upload
     // effectively did.
-    const [base] = await Promise.all([
+    await Promise.all([
       videoUploadPromise,
       timedStage("upload subtitles to R2", () =>
         uploadDirectoryToR2(outputPath, `courses/${jobId}`, { extensions: [".vtt"] })
       ),
     ]);
+    // R2 is private now (see storage.service.js / media.controller.js) —
+    // uploadDirectoryToR2's own return value (the direct R2 URL) is
+    // deliberately unused here. Every URL a client ever sees points at
+    // OUR server's authenticated proxy instead, which re-checks
+    // ownership on every request before reading the actual bytes back
+    // from R2. `base` used to BE that R2 URL; now it's just our own
+    // route, and the filenames appended after it are unchanged.
+    const base = `${env.baseUrl}/api/media/${jobId}`;
     const videoUrl = `${base}/index.m3u8`;
     const subtitleUrl = `${base}/subtitles.vtt`;
     const translatedSubtitleUrl = translationSucceeded

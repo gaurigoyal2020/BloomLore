@@ -1,6 +1,7 @@
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   ListObjectsV2Command,
   DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
@@ -27,7 +28,7 @@ const s3 = new S3Client({
 // to actually understand them. Getting this wrong doesn't break the
 // upload itself — it breaks playback, since browsers refuse to treat an
 // HLS playlist as a playlist without the right MIME type.
-const CONTENT_TYPES = {
+export const CONTENT_TYPES = {
   ".m3u8": "application/vnd.apple.mpegurl",
   ".ts": "video/mp2t",
   ".vtt": "text/vtt",
@@ -82,6 +83,29 @@ export async function uploadDirectoryToR2(localDirPath, keyPrefix, { extensions 
   logger.info("Uploaded to R2", { keyPrefix, fileCount: files.length });
 
   return `${env.r2PublicUrl}/${keyPrefix}`;
+}
+
+/**
+ * Fetches ONE object's raw bytes back from R2, for the authenticated
+ * media proxy (routes/media.routes.js) to stream to the browser. R2 is
+ * private now — see that file for why — so this backend, which already
+ * holds the R2 credentials for uploading, is also the only thing
+ * allowed to read a file back out.
+ *
+ * Returns the SDK's Body stream directly (a Node Readable) rather than
+ * buffering it into memory first — this app streams potentially many
+ * MB of .ts video segments per request, and buffering each one fully
+ * before forwarding it would multiply memory use under concurrent
+ * requests for no benefit.
+ */
+export async function getR2Object(key) {
+  const response = await s3.send(
+    new GetObjectCommand({ Bucket: env.r2BucketName, Key: key })
+  );
+  return {
+    stream: response.Body, // Node Readable — pipe this straight to res
+    contentLength: response.ContentLength,
+  };
 }
 
 /**

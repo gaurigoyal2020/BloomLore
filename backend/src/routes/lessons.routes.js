@@ -1,11 +1,12 @@
 import express from "express";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { listLessons, getLesson, updateLesson } from "../controllers/lessons.controller.js";
+import { apiLimiter } from "../config/rate-limit.config.js";
 
 const router = express.Router();
 
-router.get("/", requireAuth, listLessons);
-router.get("/:id", requireAuth, getLesson);
-router.patch("/:id", requireAuth, updateLesson);
+router.get("/", requireAuth, apiLimiter, listLessons);
+router.get("/:id", requireAuth, apiLimiter, getLesson);
+router.patch("/:id", requireAuth, apiLimiter, updateLesson);
 
 export default router;

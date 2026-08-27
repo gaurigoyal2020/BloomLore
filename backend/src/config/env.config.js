@@ -39,6 +39,16 @@ export const env = {
   get deeplApiKey() { return process.env.DEEPL_API_KEY ?? ""; },
   get baseUrl() { return process.env.BASE_URL ?? `http://localhost:${process.env.PORT ?? "8000"}`; },
   get maxFileSizeMb() { return parseInt(process.env.MAX_FILE_SIZE_MB ?? "2000", 10); },
+  // Beyond raw byte size, these bound what a video is ALLOWED to
+  // contain, checked by ffprobe in video-validation.service.js before
+  // ffmpeg ever touches the file. A file can be small in bytes and
+  // still be a resource-exhaustion weapon — e.g. a highly compressed
+  // video with an enormous frame count, or a container with hundreds of
+  // near-empty streams — so byte size alone isn't a sufficient limit.
+  get maxVideoDurationMinutes() { return parseInt(process.env.MAX_VIDEO_DURATION_MINUTES ?? "240", 10); },
+  get maxVideoWidth() { return parseInt(process.env.MAX_VIDEO_WIDTH ?? "3840", 10); }, // 4K
+  get maxVideoHeight() { return parseInt(process.env.MAX_VIDEO_HEIGHT ?? "2160", 10); }, // 4K
+  get maxVideoStreamCount() { return parseInt(process.env.MAX_VIDEO_STREAM_COUNT ?? "10", 10); },
   // Your Supabase project URL, e.g. https://abcdefgh.supabase.co
   // Used to build the JWKS URL for verifying user access tokens — see
   // auth.middleware.js. This is NOT a secret (it's the same URL your

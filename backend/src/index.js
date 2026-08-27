@@ -12,6 +12,7 @@ import { corsConfig } from "./config/cors.config.js";
 import { setupMiddlewares } from "./config/app.config.js";
 import videoRoutes from "./routes/video.routes.js";
 import lessonsRoutes from "./routes/lessons.routes.js";
+import mediaRoutes from "./routes/media.routes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
 import { ensureUploadsDir } from "./utils/file.utils.js";
 import { logger } from "./utils/logger.js";
@@ -44,6 +45,7 @@ app.get("/", (_req, res) => {
 // All feature routes live under /api
 app.use("/api", videoRoutes);
 app.use("/api/lessons", lessonsRoutes);
+app.use("/api/media", mediaRoutes);
 
 // ── Error handling (must be last) ─────────────────────────────────────────────
 app.use(notFoundHandler);

@@ -1,8 +1,8 @@
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { promisify } from "util";
 import { logger } from "../utils/logger.js";
 
-const execPromise = promisify(exec);
+const execFilePromise = promisify(execFile);
 
 // 30 minute timeout for large videos
 const FFMPEG_TIMEOUT_MS = 30 * 60 * 1000;
@@ -20,27 +20,35 @@ const FFMPEG_TIMEOUT_MS = 30 * 60 * 1000;
  * removes the redundant read/decode pass.
  */
 export const processVideo = async (videoPath, outputPath, hlsPath, audioPath) => {
-  const cmd = [
-    "ffmpeg -y",
-    `-i "${videoPath}"`,
+  // argv array, NOT a shell string. execFile() (unlike exec()) hands
+  // these directly to the ffmpeg process via execve() — there is no
+  // shell in between to interpret them. That means a filename like
+  //   foo.mp4; rm -rf ~ #
+  // is passed to ffmpeg as one literal, inert path argument, not parsed
+  // as "run ffmpeg, then run rm -rf". Quoting/escaping is no longer
+  // something we have to get right by hand — there's simply nothing
+  // left that treats ;, |, `, $(), &&, etc. as special.
+  const args = [
+    "-y",
+    "-i", videoPath,
     // ── Output 1: HLS video ──
-    "-codec:v libx264",
+    "-codec:v", "libx264",
     // veryfast = x264 spends less time searching for optimal compression.
     // Trade-off: slightly larger file at the same visual quality. Does NOT
     // affect transcription/translation accuracy — that's a separate stage
     // that reads the extracted audio, not this encoded video.
-    "-preset veryfast",
-    "-codec:a aac",
-    "-hls_time 10",
-    "-hls_playlist_type vod",
-    `-hls_segment_filename "${outputPath}/segment%03d.ts"`,
-    "-start_number 0",
-    `"${hlsPath}"`,
+    "-preset", "veryfast",
+    "-codec:a", "aac",
+    "-hls_time", "10",
+    "-hls_playlist_type", "vod",
+    "-hls_segment_filename", `${outputPath}/segment%03d.ts`,
+    "-start_number", "0",
+    hlsPath,
     // ── Output 2: MP3 audio (same decoded source, no video track) ──
     "-vn",
-    "-acodec libmp3lame",
-    `"${audioPath}"`,
-  ].join(" ");
+    "-acodec", "libmp3lame",
+    audioPath,
+  ];
 
   // execPromise gives us nothing until the WHOLE command exits — on a
   // slower machine with a longer video, that can be minutes with zero
@@ -56,7 +64,7 @@ export const processVideo = async (videoPath, outputPath, hlsPath, audioPath) =>
   }, 15_000);
 
   try {
-    await execPromise(cmd, { timeout: FFMPEG_TIMEOUT_MS });
+    await execFilePromise("ffmpeg", args, { timeout: FFMPEG_TIMEOUT_MS });
     logger.info("Video processed (HLS + audio)", { hlsPath, audioPath });
   } catch (err) {
     logger.error("FFmpeg processing failed", err, { videoPath });
