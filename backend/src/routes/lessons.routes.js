@@ -1,7 +1,7 @@
 import express from "express";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { listLessons, getLesson, updateLesson } from "../controllers/lessons.controller.js";
-import { apiLimiter } from "../config/rate-limit.config.js";
+import { apiLimiter } from "../config/rateLimit.config.js";
 
 const router = express.Router();
 

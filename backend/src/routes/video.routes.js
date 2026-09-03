@@ -2,7 +2,7 @@ import express from "express";
 import { upload } from "../config/multer.config.js";
 import { uploadVideo, getJobStatusHandler } from "../controllers/video.controller.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
-import { uploadLimiter, pollLimiter } from "../config/rate-limit.config.js";
+import { uploadLimiter, pollLimiter } from "../config/rateLimit.config.js";
 
 const router = express.Router();
 

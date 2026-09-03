@@ -1,6 +1,6 @@
 import { getExpiredLessonIds, deleteLessonRow } from "./db.service.js";
 import { deleteR2Prefix } from "./storage.service.js";
-import { logger } from "../utils/logger.js";
+import { logger } from "../utils/logger.utils.js";
 
 /**
  * Runs one cleanup pass: finds every lesson whose 24h window has

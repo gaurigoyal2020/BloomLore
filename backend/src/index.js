@@ -15,7 +15,7 @@ import lessonsRoutes from "./routes/lessons.routes.js";
 import mediaRoutes from "./routes/media.routes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware.js";
 import { ensureUploadsDir } from "./utils/file.utils.js";
-import { logger } from "./utils/logger.js";
+import { logger } from "./utils/logger.utils.js";
 import cron from "node-cron";
 import { runCleanup } from "./services/cleanup.service.js";
 

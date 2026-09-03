@@ -1,6 +1,6 @@
 import { createJob, getJob } from "../services/job.service.js";
 import { generateLessonId } from "../utils/file.utils.js";
-import { logger } from "../utils/logger.js";
+import { logger } from "../utils/logger.utils.js";
 
 /**
  * POST /api/upload

@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { env } from "../config/env.config.js";
-import { logger } from "../utils/logger.js";
+import { logger } from "../utils/logger.utils.js";
 
 /**
  * WHY THIS EXISTS

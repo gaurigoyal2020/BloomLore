@@ -12,6 +12,7 @@ const REQUIRED = [
   "R2_SECRET_ACCESS_KEY",
   "R2_BUCKET_NAME",
   "R2_PUBLIC_URL",
+  "MEDIA_TOKEN_SECRET",
 ];
 
 export function validateEnv() {
@@ -74,4 +75,18 @@ export const env = {
   // what actually gets embedded in videoUrl/subtitleUrl in API responses,
   // NOT the S3 endpoint above (that's for authenticated read/write only).
   get r2PublicUrl() { return process.env.R2_PUBLIC_URL ?? ""; },
+
+  // ── Signed media URL tokens (see utils/mediaToken.utils.js) ──
+  // Required, like the other secrets above — never commit this, never
+  // log it, never send it to the frontend. Anyone who has it can mint a
+  // token for ANY jobId, so treat a leak of this exactly like a leak of
+  // the Supabase service-role key.
+  get mediaTokenSecret() { return process.env.MEDIA_TOKEN_SECRET ?? ""; },
+  // How long a minted media URL keeps working. Long enough that a user
+  // sitting on the results page for a while (reading the transcript,
+  // stepping away, coming back) doesn't suddenly hit 401s mid-session;
+  // short enough that a URL copy-pasted somewhere else goes stale soon
+  // after. 30 minutes comfortably covers "watch the video a couple of
+  // times while reading" without being a long-lived bearer credential.
+  get mediaTokenTtlMinutes() { return parseInt(process.env.MEDIA_TOKEN_TTL_MINUTES ?? "30", 10); },
 };

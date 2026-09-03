@@ -1,5 +1,5 @@
 import axios from "axios";
-import { logger } from "../utils/logger.js";
+import { logger } from "../utils/logger.utils.js";
 import { env } from "../config/env.config.js";
 
 const LANG_MAP = {

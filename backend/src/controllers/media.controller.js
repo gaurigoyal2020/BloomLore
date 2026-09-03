@@ -1,7 +1,6 @@
 import { getR2Object, CONTENT_TYPES } from "../services/storage.service.js";
-import { getJob } from "../services/job.service.js";
-import { getLessonById } from "../services/db.service.js";
-import { logger } from "../utils/logger.js";
+import { verifyMediaToken } from "../utils/mediaToken.utils.js";
+import { logger } from "../utils/logger.utils.js";
 
 // The ONLY filenames this app ever writes into a course's R2 prefix —
 // see job.service.js (uploadDirectoryToR2 calls) for where each of
@@ -11,50 +10,40 @@ import { logger } from "../utils/logger.js";
 const ALLOWED_FILENAME_PATTERN = /^(index\.m3u8|segment\d+\.ts|subtitles(-translated)?\.vtt)$/;
 
 /**
- * Checks whether `userId` is allowed to read files belonging to `jobId`,
- * checking TWO sources rather than just one — and the reason is a real
- * timing gap, not caution for its own sake:
- *
- * job.service.js marks a job "complete" (and the frontend's poll
- * immediately sees that, videoUrl and all) BEFORE the matching Postgres
- * `lessons` row has actually been written — that insert is deliberately
- * fire-and-forget, so the user waiting on their result isn't held up by
- * a slow/failed database write (see the comment above insertLesson()'s
- * call site). If this function only checked the `lessons` table, a
- * request for the just-finished video could land in the split second
- * before that row exists and get a false "not found" — on a totally
- * legitimate request, right after the exact upload that created it.
- *
- * Checking the in-memory job store first closes that gap: it's written
- * synchronously at job creation, before any processing starts, so it's
- * always there the instant a job finishes. The lessons-table check is
- * the fallback for everything the in-memory store can't answer —
- * history views from an earlier session, or any lookup after a server
- * restart (which wipes the in-memory store, per job.service.js's own
- * comment on why that's an accepted limitation for now).
+ * Buffers a Node Readable stream into one string. Only used for
+ * index.m3u8 below — that file is always a few hundred bytes (a
+ * handful of text lines), never large like a video segment, so
+ * buffering it fully (instead of streaming it straight through like
+ * every other file this route serves) is fine and is what lets us edit
+ * its contents before sending it on.
  */
-async function userOwnsJob(jobId, userId) {
-  const job = getJob(jobId);
-  if (job) {
-    return job.userId === userId;
-  }
-  const lesson = await getLessonById(jobId, userId);
-  return lesson !== null;
+function streamToString(stream) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    stream.on("data", (chunk) => chunks.push(chunk));
+    stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    stream.on("error", reject);
+  });
 }
 
 /**
- * GET /api/media/:jobId/:filename
+ * GET /api/media/:jobId/:filename?token=...
  *
- * Replaces directly-public R2 URLs. Every request re-checks ownership
- * before reading anything back from R2 — same authenticated pattern as
- * every other per-user resource in this app (status polling, lesson
- * fetch), just applied to video/subtitle bytes instead of JSON.
+ * Replaces directly-public R2 URLs. There is deliberately NO
+ * `requireAuth` in front of this route (see media.routes.js) — a
+ * browser's native <video>/<track> tags and an HLS player's own
+ * playlist/segment requests are issued by the browser itself, and there
+ * is no way to attach a custom Authorization header to those. Instead,
+ * authorization travels as a signed `?token=` query parameter — see
+ * utils/mediaToken.utils.js for the full explanation of how that token
+ * proves a request is legitimate without needing a header at all.
  *
- * The HLS player requests the playlist through THIS route
- * (/api/media/:jobId/index.m3u8), and because the playlist itself
- * references its segments by plain relative filename ("segment000.ts"),
- * the player automatically re-requests those segments through this same
- * route too — no rewriting of the playlist's contents is needed.
+ * The ownership check ("does this user actually own this jobId?") does
+ * NOT happen here — it already happened once, at the moment the token
+ * was minted (job.service.js for a just-finished live job,
+ * lessons.controller.js for a history view). All this route re-checks
+ * is "was this exact token, for this exact jobId, genuinely issued by
+ * us, and has it not expired yet?" — see verifyMediaToken().
  *
  * NOTE: this does not implement HTTP Range requests. Each HLS segment
  * is a small (~10s) whole file the player fetches in full, so this
@@ -65,17 +54,22 @@ async function userOwnsJob(jobId, userId) {
 export async function getMediaFile(req, res, next) {
   try {
     const { jobId, filename } = req.params;
+    const { token } = req.query;
 
     if (!ALLOWED_FILENAME_PATTERN.test(filename)) {
       return res.status(400).json({ success: false, error: "Invalid file name" });
     }
 
-    const authorized = await userOwnsJob(jobId, req.user.id);
-    if (!authorized) {
-      // Same 404-for-both reasoning as getJobStatusHandler: don't let a
-      // different response for "exists but isn't yours" confirm a jobId
-      // is real to someone who doesn't own it.
-      return res.status(404).json({ success: false, error: "Not found" });
+    if (!verifyMediaToken(token, jobId)) {
+      // 401, not 404, is correct here (unlike the old header-based
+      // version): there's no "this jobId doesn't exist" vs "isn't
+      // yours" distinction to hide anymore, since knowing a jobId alone
+      // was never the secret — the signed token is. An invalid/expired/
+      // missing token just means "this URL isn't currently authorized,"
+      // which is exactly what the HLS player/frontend should re-request
+      // a fresh token in response to.
+      logger.warn("Rejected media request: invalid or expired token", { jobId, filename });
+      return res.status(401).json({ success: false, error: "Invalid or expired media token" });
     }
 
     const ext = "." + filename.split(".").pop();
@@ -90,6 +84,40 @@ export async function getMediaFile(req, res, next) {
       return res.status(404).json({ success: false, error: "Not found" });
     }
 
+    // index.m3u8 needs special handling: its segment lines are plain
+    // relative filenames ("segment000.ts"), and relative-URL resolution
+    // in a browser/HLS player does NOT carry a query string from the
+    // playlist's own URL over to the files it references — the segment
+    // requests would go out with no `?token=` at all and get rejected
+    // by the check above. So we rewrite each segment line to carry the
+    // SAME token this playlist request was authorized with before
+    // sending the playlist text on. Every other file (segments,
+    // subtitles) has no such internal references and is streamed
+    // through untouched.
+    if (filename === "index.m3u8") {
+      const playlistText = await streamToString(object.stream);
+      const rewritten = playlistText
+        .split("\n")
+        .map((line) => {
+          const trimmed = line.trim();
+          // Lines starting with "#" are HLS directives/metadata, not
+          // file references — leave them alone. Blank lines too.
+          if (!trimmed || trimmed.startsWith("#")) return line;
+          return `${trimmed}?token=${encodeURIComponent(token)}`;
+        })
+        .join("\n");
+
+      res.setHeader("Content-Type", CONTENT_TYPES[ext] ?? "application/octet-stream");
+      // NOT cached the way segments/subtitles are below: the token
+      // embedded in this rewritten playlist expires, so a long-cached
+      // copy would eventually serve segment links that 401. Segments/
+      // subtitles are fine to cache because the CLIENT re-fetches the
+      // playlist (and gets fresh segment tokens) far more often than
+      // the token TTL, in normal playback.
+      res.status(200).send(rewritten);
+      return;
+    }
+
     res.setHeader("Content-Type", CONTENT_TYPES[ext] ?? "application/octet-stream");
     if (object.contentLength != null) {
       res.setHeader("Content-Length", object.contentLength);
@@ -98,7 +126,7 @@ export async function getMediaFile(req, res, next) {
     // edit rewrites the same KEY with new content — see uploadFileToR2's
     // call site in lessons.controller.js — so a stale cached copy would
     // only ever affect that one lesson's browser cache for a bounded
-    // time, not leak anything across users, since the auth check above
+    // time, not leak anything across users, since the token check above
     // already ran).
     res.setHeader("Cache-Control", "private, max-age=3600");
 

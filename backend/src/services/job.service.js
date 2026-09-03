@@ -1,5 +1,5 @@
 import { processVideo } from "./ffmpeg.service.js";
-import { validateVideoFile } from "./video-validation.service.js";
+import { validateVideoFile } from "./videoValidation.service.js";
 import { transcribeAudio } from "./transcription.service.js";
 import { translateText } from "./translation.service.js";
 import {
@@ -9,9 +9,10 @@ import {
 } from "./subtitle.service.js";
 import { uploadDirectoryToR2 } from "./storage.service.js";
 import { insertLesson } from "./db.service.js";
+import { signMediaToken } from "../utils/mediaToken.utils.js";
 import { env } from "../config/env.config.js";
 import { ensureDirectoryExists, deleteFile, deleteDirectory } from "../utils/file.utils.js";
-import { logger } from "../utils/logger.js";
+import { logger } from "../utils/logger.utils.js";
 
 // ── In-memory job store ─────────────────────────────────────────────
 // This is a plain JS Map living in the Node process's memory — NOT a
@@ -215,15 +216,45 @@ async function processJob({ jobId, videoPath, targetLang, originalName, fileSize
     // R2 is private now (see storage.service.js / media.controller.js) —
     // uploadDirectoryToR2's own return value (the direct R2 URL) is
     // deliberately unused here. Every URL a client ever sees points at
-    // OUR server's authenticated proxy instead, which re-checks
-    // ownership on every request before reading the actual bytes back
-    // from R2. `base` used to BE that R2 URL; now it's just our own
-    // route, and the filenames appended after it are unchanged.
+    // OUR server's authenticated proxy instead. `base` used to BE the
+    // direct R2 URL; now it's just our own route, and the filenames
+    // appended after it are unchanged.
     const base = `${env.baseUrl}/api/media/${jobId}`;
+
+    // These TOKENLESS urls are what get persisted to the `lessons` table
+    // below (via insertLesson) — deliberately without a `?token=`. A
+    // token is only valid for mediaTokenTtlMinutes (see env.config.js),
+    // so baking one into a value that lives in the database forever
+    // would just mean every history view stops working the moment that
+    // window passes. Instead, a FRESH token gets minted every time a
+    // lesson is actually fetched — see lessons.controller.js's
+    // shapeLesson(), which appends one of these to each stored base URL
+    // right before sending the response.
     const videoUrl = `${base}/index.m3u8`;
     const subtitleUrl = `${base}/subtitles.vtt`;
     const translatedSubtitleUrl = translationSucceeded
       ? `${base}/subtitles-translated.vtt`
+      : null;
+
+    // The live response below (job.data), on the other hand, is what
+    // the frontend's poll reads the INSTANT this job finishes — so it
+    // needs a working, tokened URL right now, not a bare one the player
+    // can't actually use. One token covers every file for this job
+    // (verifyMediaToken only checks jobId + expiry, not which filename),
+    // so minting it once here and reusing it below is enough.
+    //
+    // Ownership is exactly what already justifies minting this: this
+    // whole processJob() function only ever runs for the userId that
+    // createJob() was originally called with, itself only reachable
+    // through requireAuth + the upload endpoint (see video.routes.js) —
+    // so by the time we get here, "this user owns this job" has already
+    // been established, and this token is just proof of that fact
+    // travelling forward into the response.
+    const liveToken = signMediaToken(jobId);
+    const tokenedVideoUrl = `${videoUrl}?token=${liveToken}`;
+    const tokenedSubtitleUrl = `${subtitleUrl}?token=${liveToken}`;
+    const tokenedTranslatedSubtitleUrl = translatedSubtitleUrl
+      ? `${translatedSubtitleUrl}?token=${liveToken}`
       : null;
 
     // Local disk was only ever scratch space for ffmpeg to write into —
@@ -238,9 +269,9 @@ async function processJob({ jobId, videoPath, targetLang, originalName, fileSize
       // moment the upload is accepted, no separate id minted later. This
       // also answers the open question in the handoff doc about whether
       // lessonId would need to change shape for the job queue — it doesn't.
-      videoUrl,
-      subtitleUrl,
-      translatedSubtitleUrl,
+      videoUrl: tokenedVideoUrl,
+      subtitleUrl: tokenedSubtitleUrl,
+      translatedSubtitleUrl: tokenedTranslatedSubtitleUrl,
       transcript,
       translatedText,
       // Was missing here even though lessons.controller.js's getLesson

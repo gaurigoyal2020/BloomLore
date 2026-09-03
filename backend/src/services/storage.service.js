@@ -8,7 +8,7 @@ import {
 import fs from "fs/promises";
 import path from "path";
 import { env } from "../config/env.config.js";
-import { logger } from "../utils/logger.js";
+import { logger } from "../utils/logger.utils.js";
 
 /**
  * R2 is S3-compatible object storage, so we talk to it with AWS's own

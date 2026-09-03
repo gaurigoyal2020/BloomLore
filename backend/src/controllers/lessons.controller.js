@@ -1,7 +1,24 @@
 import { getLessonsForUser, getLessonById, updateLessonSubtitleCues } from "../services/db.service.js";
 import { cuesToVTT } from "../services/subtitle.service.js";
 import { uploadFileToR2 } from "../services/storage.service.js";
-import { logger } from "../utils/logger.js";
+import { signMediaToken } from "../utils/mediaToken.utils.js";
+import { logger } from "../utils/logger.utils.js";
+
+/**
+ * Appends a freshly-minted, short-lived token to a base media URL
+ * stored in the database — see job.service.js's comment on why the DB
+ * itself stores TOKENLESS urls (a baked-in token would go stale
+ * forever once its TTL passed). `requireAuth` + `getLessonById`'s own
+ * `.eq("user_id", userId)` filter (see db.service.js) already
+ * established ownership before this ever runs — same pattern as
+ * job.service.js, just re-verified via a DB row instead of an
+ * in-memory job object.
+ */
+function withFreshToken(url, jobId) {
+  if (!url) return url; // translatedSubtitleUrl is legitimately null sometimes
+  const token = signMediaToken(jobId);
+  return `${url}?token=${token}`;
+}
 
 /** Every subtitle array must match this shape: [{ start, end, text }, ...] */
 function isValidCueArray(value) {
@@ -29,9 +46,9 @@ function isValidCueArray(value) {
 function shapeLesson(lesson) {
   return {
     lessonId: lesson.id,
-    videoUrl: lesson.video_url,
-    subtitleUrl: lesson.subtitle_url,
-    translatedSubtitleUrl: lesson.translated_subtitle_url,
+    videoUrl: withFreshToken(lesson.video_url, lesson.id),
+    subtitleUrl: withFreshToken(lesson.subtitle_url, lesson.id),
+    translatedSubtitleUrl: withFreshToken(lesson.translated_subtitle_url, lesson.id),
     transcript: lesson.transcript,
     translatedText: lesson.translated_text,
     originalFilename: lesson.original_filename,

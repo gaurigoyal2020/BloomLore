@@ -1,7 +1,7 @@
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { env } from "../config/env.config.js";
-import { logger } from "../utils/logger.js";
+import { logger } from "../utils/logger.utils.js";
 
 const execFilePromise = promisify(execFile);
 

@@ -1,5 +1,5 @@
 import multer from "multer";
-import { logger } from "../utils/logger.js";
+import { logger } from "../utils/logger.utils.js";
 import { env } from "../config/env.config.js";
 
 export class AppError extends Error {

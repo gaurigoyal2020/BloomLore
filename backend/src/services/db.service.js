@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { env } from "../config/env.config.js";
-import { logger } from "../utils/logger.js";
+import { logger } from "../utils/logger.utils.js";
 
 /**
  * A separate Supabase client from the one the frontend uses — this one
