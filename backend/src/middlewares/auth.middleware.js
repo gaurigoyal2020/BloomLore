@@ -64,14 +64,23 @@ export async function requireAuth(req, res, next) {
       issuer: `${env.supabaseUrl}/auth/v1`,
       audience: "authenticated", // Supabase sets this for logged-in users
     });
-    // Cheap to log always (not just on slow requests) — this call is
-    // either near-instant (JWKS already cached) or a real network round
-    // trip to Supabase (first request after server start, or after the
-    // cache's TTL expires). Having both numbers in the logs is what lets
-    // "dashboard is slow" actually get diagnosed instead of guessed at.
-    logger.debug("[timing] JWT verify", {
-      ms: Date.now() - verifyStart,
-    });
+    // Only logged when it's actually slow — a real network round trip to
+    // fetch/refresh Supabase's JWKS (first request after server start,
+    // or after the cache's TTL expires), not the near-instant cache-hit
+    // case, which is every other request. This used to log unconditionally
+    // on purpose ("cheap to log always"), but "cheap" only accounted for
+    // the log line's own cost, not what it does to readability: a
+    // frontend polling /api/lessons or /api/status every couple of
+    // seconds means requireAuth runs constantly, and logging every single
+    // one buried real signal (job progress, errors, uploads) under a wall
+    // of near-identical 1-3ms timing lines. The threshold is set well
+    // above a normal cache-hit's ballpark, so a genuine slow-JWKS-fetch
+    // (what the original comment actually cared about diagnosing) still
+    // shows up clearly.
+    const verifyMs = Date.now() - verifyStart;
+    if (verifyMs > 50) {
+      logger.debug("[timing] JWT verify (slow)", { ms: verifyMs });
+    }
 
     req.user = { id: payload.sub, email: payload.email };
     next();

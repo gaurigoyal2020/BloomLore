@@ -41,7 +41,7 @@ export const env = {
   get baseUrl() { return process.env.BASE_URL ?? `http://localhost:${process.env.PORT ?? "8000"}`; },
   get maxFileSizeMb() { return parseInt(process.env.MAX_FILE_SIZE_MB ?? "2000", 10); },
   // Beyond raw byte size, these bound what a video is ALLOWED to
-  // contain, checked by ffprobe in video-validation.service.js before
+  // contain, checked by ffprobe in videoValidation.service.js before
   // ffmpeg ever touches the file. A file can be small in bytes and
   // still be a resource-exhaustion weapon — e.g. a highly compressed
   // video with an enormous frame count, or a container with hundreds of

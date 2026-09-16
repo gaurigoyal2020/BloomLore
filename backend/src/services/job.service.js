@@ -144,7 +144,7 @@ async function processJob({ jobId, videoPath, targetLang, originalName, fileSize
     );
 
     job.stage = "transcribing";
-    const { transcript, words, detectedLang } = await timedStage(
+    const { transcript, words, detectedLang, languageConfidence } = await timedStage(
       "transcription (Deepgram)",
       () => transcribeAudio(audioPath)
     );
@@ -163,7 +163,7 @@ async function processJob({ jobId, videoPath, targetLang, originalName, fileSize
     );
     const translationSucceeded = translationStatus === "success";
 
-    logger.info("Transcript", { detectedLang, chars: transcript.length });
+    logger.info("Transcript", { detectedLang, languageConfidence, chars: transcript.length });
     logger.debug("Translated", { targetLang, translationStatus, chars: translatedText.length });
 
     job.stage = "building-subtitles";
@@ -231,7 +231,23 @@ async function processJob({ jobId, videoPath, targetLang, originalName, fileSize
     // shapeLesson(), which appends one of these to each stored base URL
     // right before sending the response.
     const videoUrl = `${base}/index.m3u8`;
-    const subtitleUrl = `${base}/subtitles.vtt`;
+    // Deepgram can genuinely come back with zero words — not just for a
+    // silent/very short clip, but also (per real production logs) for
+    // music/singing audio where language auto-detection guesses wrong
+    // and the resulting model finds nothing it recognizes as speech in
+    // the (wrong) language it picked. generateWebVTT already handles
+    // this correctly on the FILE side — it returns early and never
+    // writes subtitles.vtt to disk when `words` is empty (see
+    // subtitle.service.js) — but this URL used to get built regardless,
+    // pointing at a file that was never created and never uploaded to
+    // R2. The frontend would get handed that URL anyway, the media
+    // route would legitimately 404 on it, and there was no way to tell
+    // "no subtitles exist for this job" apart from "something's broken."
+    // Same conditional-null pattern already used for
+    // translatedSubtitleUrl right below — this just needed to apply one
+    // step earlier, to subtitleUrl itself.
+    const hasTranscript = words.length > 0;
+    const subtitleUrl = hasTranscript ? `${base}/subtitles.vtt` : null;
     const translatedSubtitleUrl = translationSucceeded
       ? `${base}/subtitles-translated.vtt`
       : null;
@@ -252,7 +268,7 @@ async function processJob({ jobId, videoPath, targetLang, originalName, fileSize
     // travelling forward into the response.
     const liveToken = signMediaToken(jobId);
     const tokenedVideoUrl = `${videoUrl}?token=${liveToken}`;
-    const tokenedSubtitleUrl = `${subtitleUrl}?token=${liveToken}`;
+    const tokenedSubtitleUrl = subtitleUrl ? `${subtitleUrl}?token=${liveToken}` : null;
     const tokenedTranslatedSubtitleUrl = translatedSubtitleUrl
       ? `${translatedSubtitleUrl}?token=${liveToken}`
       : null;

@@ -34,7 +34,7 @@ router.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 // utils/mediaToken.utils.js.
 //
 // pollLimiter is still applied, but note WHAT it keys by now changes:
-// rate-limit.config.js's keyByUser falls back to IP when req.user isn't
+// rateLimit.config.js's keyByUser falls back to IP when req.user isn't
 // set (exactly this case, per its own comment), so this route is now
 // rate-limited per IP rather than per user. Still a meaningful cap on
 // runaway/scripted requests against this endpoint.
